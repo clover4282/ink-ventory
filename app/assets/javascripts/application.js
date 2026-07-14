@@ -1,19 +1,130 @@
+const words = (text) => text.normalize("NFC").toLocaleLowerCase("ko").match(/[\p{L}]+|[\p{N}]+/gu) || []
+
+const distance = (left, right) => {
+  let previous = Array.from({ length: right.length + 1 }, (_, index) => index)
+  left.forEach((leftCharacter, leftIndex) => {
+    const current = [leftIndex + 1]
+    right.forEach((rightCharacter, rightIndex) => {
+      current.push(Math.min(current[rightIndex] + 1, previous[rightIndex + 1] + 1, previous[rightIndex] + (leftCharacter === rightCharacter ? 0 : 1)))
+    })
+    previous = current
+  })
+  return previous.at(-1)
+}
+
+const similar = (term, candidate) => {
+  const left = [...term.normalize("NFD")]
+  const right = [...candidate.normalize("NFD")]
+  const limit = left.length >= 6 ? 2 : left.length >= 3 ? 1 : 0
+  return Math.abs(left.length - right.length) <= limit && distance(left, right) <= limit
+}
+
+const highlight = (element, terms) => {
+  const title = element.dataset.productTitle
+  const fragment = document.createDocumentFragment()
+  let position = 0
+
+  title.matchAll(/[\p{L}]+|[\p{N}]+/gu).forEach((match) => {
+    fragment.append(title.slice(position, match.index))
+    const word = match[0].normalize("NFC").toLocaleLowerCase("ko")
+    const matched = terms.some((term) => word.includes(term))
+    const node = matched ? document.createElement("mark") : document.createTextNode(match[0])
+    if (matched) node.textContent = match[0]
+    fragment.append(node)
+    position = match.index + match[0].length
+  })
+
+  fragment.append(title.slice(position))
+  element.replaceChildren(fragment)
+}
+
+const score = (text, query, terms, candidates) => {
+  let value = text.includes(query.toLocaleLowerCase("ko")) ? 100 : 0
+
+  for (const term of terms) {
+    if (text.includes(term)) value += 10
+    else if (candidates.some((candidate) => similar(term, candidate))) value += 1
+    else return 0
+  }
+  return value
+}
+
+const catalogFilters = () => {
+  const controls = document.querySelector("[data-catalog-controls]")
+  const numberValue = (selector) => {
+    const value = controls.querySelector(selector).value
+    return value === "" ? null : Number(value)
+  }
+
+  return {
+    site: controls.querySelector("[data-filter-site]").value,
+    status: controls.querySelector("[data-filter-status]").value,
+    minPrice: numberValue("[data-filter-min-price]"),
+    maxPrice: numberValue("[data-filter-max-price]"),
+    restocked: controls.querySelector("[data-filter-restocked]").checked,
+    sort: controls.querySelector("[data-catalog-sort]").value
+  }
+}
+
+const matchesFilters = (card, filters) => {
+  const price = card.dataset.price === "" ? null : Number(card.dataset.price)
+  if (filters.site && card.dataset.siteId !== filters.site) return false
+  if (filters.status && card.dataset.status !== filters.status) return false
+  if (filters.minPrice !== null && (price === null || price < filters.minPrice)) return false
+  if (filters.maxPrice !== null && (price === null || price > filters.maxPrice)) return false
+  return !filters.restocked || Number(card.dataset.restockedAt) > 0
+}
+
+const sortCatalog = (ranked, sort) => {
+  const metric = (entry, name) => Number(entry.card.dataset[name] || 0)
+  const price = (entry, missing) => entry.card.dataset.price === "" ? missing : Number(entry.card.dataset.price)
+
+  ranked.sort((left, right) => {
+    let order = 0
+    if (sort === "popularity") order = metric(right, "clicks") - metric(left, "clicks")
+    else if (sort === "newest") order = metric(right, "createdAt") - metric(left, "createdAt")
+    else if (sort === "likes") order = metric(right, "likes") - metric(left, "likes")
+    else if (sort === "price_asc") order = price(left, Infinity) - price(right, Infinity)
+    else if (sort === "price_desc") order = price(right, -1) - price(left, -1)
+    else if (sort === "restocked") order = metric(right, "restockedAt") - metric(left, "restockedAt")
+    else order = right.matchScore - left.matchScore
+
+    return order || right.matchScore - left.matchScore || left.index - right.index
+  })
+}
+
 const search = (form) => {
   const input = form.querySelector("input[name='q']")
   const query = input.value.normalize("NFC").trim()
-  const needle = query.toLocaleLowerCase("ko")
-  const cards = document.querySelectorAll("[data-catalog-card]")
-  let count = 0
+  const terms = words(query)
+  const filters = catalogFilters()
+  const cards = [...document.querySelectorAll("[data-catalog-card]")]
+  const ranked = []
 
-  cards.forEach((card) => {
-    const matches = !needle || card.dataset.searchText.includes(needle)
-    card.hidden = !matches || count >= 50
-    if (matches) count += 1
+  cards.forEach((card, index) => {
+    const text = card.dataset.searchText
+    const candidates = card.searchWords ||= words(text)
+    const matchScore = terms.length ? score(text, query, terms, candidates) : 1
+    card.catalogIndex ??= index
+    card.hidden = true
+    const title = card.querySelector("[data-product-title]")
+    if (title.querySelector("mark")) highlight(title, [])
+    if (matchScore > 0 && matchesFilters(card, filters)) ranked.push({ card, matchScore, index: card.catalogIndex })
   })
 
+  sortCatalog(ranked, filters.sort)
+  ranked.slice(0, 50).forEach(({ card }) => {
+    document.querySelector("[data-catalog-cards]").append(card)
+    card.hidden = false
+    highlight(card.querySelector("[data-product-title]"), terms)
+  })
+  const count = ranked.length
+
   document.querySelector("[data-catalog-title]").textContent = query ? `검색 결과 ${count}개` : `현재 수집 만년필 ${count}개`
-  document.querySelector("[data-catalog-summary]").textContent = query ? `“${query}” · ` : "최근 정상 확인순 최대 50개"
-  document.querySelector("[data-catalog-clear]").hidden = !query
+  const filtered = filters.site || filters.status || filters.minPrice !== null || filters.maxPrice !== null || filters.restocked || filters.sort !== "relevance"
+  const summary = [query && `“${query}”`, filtered && "필터·정렬 적용"].filter(Boolean).join(" · ")
+  document.querySelector("[data-catalog-summary]").textContent = summary ? `${summary} · ` : "최근 정상 확인순 최대 50개"
+  document.querySelector("[data-catalog-clear]").hidden = !query && !filtered
   document.querySelector("[data-catalog-empty]").hidden = count > 0
   document.querySelector("[data-catalog-empty]").textContent = query ? "검색 결과가 없습니다." : "아직 정상 수집된 상품이 없습니다."
   document.querySelector("[data-catalog-cards]").hidden = count === 0
@@ -24,6 +135,11 @@ const search = (form) => {
 }
 
 document.addEventListener("input", (event) => {
+  if (event.target.matches("[data-catalog-control]")) {
+    search(document.querySelector("form[data-auto-submit]"))
+    return
+  }
+
   const form = event.target.closest("form[data-auto-submit]")
   if (!form) return
 
@@ -48,11 +164,85 @@ document.addEventListener("submit", (event) => {
 })
 
 document.addEventListener("click", (event) => {
+  const likeButton = event.target.closest("[data-like-button]")
+  if (likeButton) {
+    event.preventDefault()
+    if (likeButton.dataset.likeLoginRequired !== undefined) {
+      showCatalogNotice("좋아요는 로그인 후 이용할 수 있습니다.")
+    } else if (likeButton.dataset.likeEmailRequired !== undefined) {
+      showCatalogNotice("알림 이메일을 인증한 뒤 좋아요를 이용할 수 있습니다.")
+    } else {
+      toggleLike(likeButton)
+    }
+    return
+  }
+
+  const trackedLink = event.target.closest("[data-track-click]")
+  if (trackedLink) {
+    trackClick(trackedLink)
+    return
+  }
+
   if (!event.target.closest("[data-catalog-clear]")) return
 
   event.preventDefault()
   const input = document.querySelector("form[data-auto-submit] input[name='q']")
   input.value = ""
+  document.querySelectorAll("[data-catalog-control]").forEach((control) => {
+    if (control.type === "checkbox") control.checked = false
+    else control.value = control.matches("[data-catalog-sort]") ? "relevance" : ""
+  })
   search(input.form)
   input.focus()
+})
+
+const requestHeaders = () => {
+  const headers = { "Accept": "application/json" }
+  const token = document.querySelector("meta[name='csrf-token']")?.content
+  if (token) headers["X-CSRF-Token"] = token
+  return headers
+}
+
+const showCatalogNotice = (message) => {
+  const notice = document.querySelector("[data-catalog-notice]")
+  notice.textContent = message
+  notice.hidden = false
+  notice.focus()
+}
+
+const toggleLike = (button) => {
+  button.disabled = true
+  fetch(button.dataset.likeUrl, { method: "POST", headers: requestHeaders() })
+    .then((response) => {
+      if (!response.ok) throw new Error("like failed")
+      return response.json()
+    })
+    .then(({ liked, count }) => {
+      const card = button.closest("[data-catalog-card]")
+      card.dataset.likes = count
+      button.classList.toggle("liked", liked)
+      button.setAttribute("aria-pressed", liked)
+      button.querySelector("[data-like-icon]").textContent = liked ? "♥" : "♡"
+      button.querySelector("[data-like-count]").textContent = count
+      showCatalogNotice(liked ? "관심 상품에 추가했습니다. 재입고와 가격 변동을 이메일로 알려드릴게요." : "관심 상품에서 제거했습니다.")
+      search(document.querySelector("form[data-auto-submit]"))
+    })
+    .catch(() => showCatalogNotice("좋아요를 처리하지 못했습니다. 잠시 후 다시 시도해 주세요."))
+    .finally(() => { button.disabled = false })
+}
+
+const trackClick = (link) => {
+  fetch(link.dataset.trackClick, { method: "POST", headers: requestHeaders(), keepalive: true })
+    .then((response) => response.ok ? response.json() : null)
+    .then((result) => {
+      if (!result) return
+      const card = link.closest("[data-catalog-card]")
+      card.dataset.clicks = result.count
+      card.querySelector("[data-click-count]").textContent = result.count
+    })
+    .catch(() => {})
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("form[data-auto-submit]").forEach(search)
 })

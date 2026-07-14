@@ -22,18 +22,15 @@ class StoreParser
     raw_offers = product&.[]("offers")
     aggregate_price = raw_offers.is_a?(Hash) ? raw_offers["lowPrice"] : nil
     base_price = price_value(aggregate_price) || price_value(offers.first&.dig("price")) || html_price
-    variants = offers.filter_map.with_index { |offer, index| variant_from_offer(offer, index, base_price) }
-    visible_variants = variants_from_options(base_price)
-    variants = visible_variants if variants.empty? || (visible_variants.any? && variants.all? { |variant| variant.availability == "unknown" })
 
     aggregate_availability = raw_offers["availability"] if raw_offers.is_a?(Hash)
-    product_availability = normalize_availability(offers.first&.dig("availability") || aggregate_availability)
-    product_availability = variants.any? { |variant| variant.availability == "in_stock" } ? "in_stock" : variants.first&.availability if product_availability == "unknown" && variants.any?
+    product_availability = offers_availability(offers, aggregate_availability)
+    product_availability = options_availability if product_availability == "unknown"
     product_availability = html_availability if product_availability == "unknown"
 
     ListingState.new(
       title: title.squish, currency: offers.first&.dig("priceCurrency").presence || "KRW",
-      base_price_cents: base_price, availability: product_availability || "unknown", variants: variants,
+      base_price_cents: base_price, availability: product_availability || "unknown", variants: [],
       image_url: product_image(product)
     )
   end
@@ -51,37 +48,26 @@ class StoreParser
       nil
     end
 
-    def variant_from_offer(offer, index, base_price)
-      return unless offer.is_a?(Hash)
-      id = offer["sku"].presence || offer["url"].to_s[/[?&](?:item_code|option_code)=([^&]+)/, 1] || "offer-#{index + 1}"
-      name = offer["name"].presence || offer.dig("itemOffered", "name").presence || (index.zero? ? "기본" : "옵션 #{index + 1}")
-      VariantState.new(
-        external_id: id, name: name.squish, price_cents: price_value(offer["price"]) || base_price,
-        availability: normalize_availability(offer["availability"]), visible_quantity: visible_quantity(name)
-      )
-    end
-
-    def variants_from_options(base_price)
+    def options_availability
       option_nodes = if @parser_kind == "makeshop"
         @document.css("select.basic_option option, select[id='MK_p_s_0'] option")
       else
         @document.css("select[id^='product_option_id'] option")
       end
-      id_occurrences = Hash.new(0)
-      option_nodes.uniq.filter_map.with_index do |option, index|
+      options = option_nodes.uniq.filter do |option|
         name = option.text.squish
-        next if name.blank? || option["value"].blank? || name.match?(/선택|필수/i) || name.match?(/\A[-─]+\z/)
-        sold_out = option["disabled"] || name.match?(/품절|sold\s*out/i)
-        extra = price_value(name[/[+＋]\s*([\d,]+)\s*원?/, 1]) || 0
-        raw_id = option["value"].presence || "option-#{index + 1}"
-        id_occurrences[raw_id] += 1
-        external_id = id_occurrences[raw_id] == 1 ? raw_id : "#{raw_id}--#{id_occurrences[raw_id]}"
-        VariantState.new(
-          external_id: external_id, name: name,
-          price_cents: base_price && base_price + extra,
-          availability: sold_out ? "out_of_stock" : "in_stock", visible_quantity: visible_quantity(name)
-        )
+        name.present? && option["value"].present? && !name.match?(/선택|필수/i) && !name.match?(/\A[-─]+\z/)
       end
+      return "unknown" if options.empty?
+      options.any? { |option| !option["disabled"] && !option.text.match?(/품절|sold\s*out/i) } ? "in_stock" : "out_of_stock"
+    end
+
+    def offers_availability(offers, aggregate_availability)
+      availabilities = offers.filter_map { |offer| normalize_availability(offer["availability"]) if offer.is_a?(Hash) }
+      availabilities << normalize_availability(aggregate_availability)
+      return "in_stock" if availabilities.include?("in_stock")
+      return "out_of_stock" if availabilities.include?("out_of_stock")
+      "unknown"
     end
 
     def html_price
@@ -154,10 +140,6 @@ class StoreParser
       return "out_of_stock" if text.match?(/outofstock|soldout|품절|unavailable/)
       return "in_stock" if text.match?(/instock|limitedavailability|재고\s*있|판매중/)
       "unknown"
-    end
-
-    def visible_quantity(text)
-      text.to_s[/(?:재고|남은\s*수량)\s*[:：]?\s*(\d+)\s*개/i, 1]&.to_i
     end
 
     def wrap(value)

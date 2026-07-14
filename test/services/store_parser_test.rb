@@ -3,10 +3,10 @@ require "test_helper"
 class StoreParserTest < ActiveSupport::TestCase
   test "parses fixtures for all four supported stores" do
     expectations = {
-      "bestpen_product.html" => [ "makeshop", "베스트펜 테스트 만년필", 30_000, 1 ],
-      "pengalleria_product.html" => [ "makeshop", "펜갤러리아 테스트 만년필", 51_000, 2 ],
-      "blueblack_product.html" => [ "cafe24", "블루블랙 테스트 만년필", 240_000, 1 ],
-      "penlog_product.html" => [ "cafe24", "펜로그 테스트 만년필", 146_250, 1 ]
+      "bestpen_product.html" => [ "makeshop", "베스트펜 테스트 만년필", 30_000, 0 ],
+      "pengalleria_product.html" => [ "makeshop", "펜갤러리아 테스트 만년필", 51_000, 0 ],
+      "blueblack_product.html" => [ "cafe24", "블루블랙 테스트 만년필", 240_000, 0 ],
+      "penlog_product.html" => [ "cafe24", "펜로그 테스트 만년필", 146_250, 0 ]
     }
 
     expectations.each do |filename, (parser_kind, title, price, variant_count)|
@@ -16,7 +16,7 @@ class StoreParserTest < ActiveSupport::TestCase
     end
   end
 
-  test "parses json ld variants without using hidden stock" do
+  test "uses json ld offers for overall stock without collecting options" do
     html = <<~HTML
       <html><head>
         <script type="application/ld+json">
@@ -33,8 +33,8 @@ class StoreParserTest < ActiveSupport::TestCase
 
     assert_equal "라미 사파리", state.title
     assert_equal 32_000, state.base_price_cents
-    assert_equal %w[in_stock out_of_stock], state.variants.map(&:availability)
-    assert_nil state.variants.first.visible_quantity
+    assert_equal "in_stock", state.availability
+    assert_empty state.variants
   end
 
   test "parses product offers supplied as a json ld array" do
@@ -51,10 +51,10 @@ class StoreParserTest < ActiveSupport::TestCase
 
     assert_equal 25_000, state.base_price_cents
     assert_equal "in_stock", state.availability
-    assert_equal %w[in_stock out_of_stock], state.variants.map(&:availability)
+    assert_empty state.variants
   end
 
-  test "parses visible makeshop options and only explicit visible quantities" do
+  test "uses visible options for overall stock without collecting them" do
     html = <<~HTML
       <html><head><meta property="og:title" content="카웨코 스포츠"><meta property="product:price:amount" content="45,000"></head>
       <body>
@@ -66,11 +66,11 @@ class StoreParserTest < ActiveSupport::TestCase
     state = StoreParser.call(html, parser_kind: "makeshop")
 
     assert_equal 45_000, state.base_price_cents
-    assert_equal 3, state.variants.first.visible_quantity
-    assert_equal "out_of_stock", state.variants.last.availability
+    assert_equal "in_stock", state.availability
+    assert_empty state.variants
   end
 
-  test "keeps makeshop options that reuse the same value" do
+  test "ignores makeshop options that reuse the same value" do
     html = <<~HTML
       <html><head><meta property="og:title" content="다단 옵션 만년필"><meta property="product:price:amount" content="45,000"></head>
       <body>
@@ -81,7 +81,7 @@ class StoreParserTest < ActiveSupport::TestCase
 
     state = StoreParser.call(html, parser_kind: "makeshop")
 
-    assert_equal %w[0 1 0--2 1--2], state.variants.map(&:external_id)
+    assert_empty state.variants
   end
 
   test "raises on an unrecognizable response instead of treating it as sold out" do
@@ -151,6 +151,6 @@ class StoreParserTest < ActiveSupport::TestCase
 
     state = StoreParser.call(html, parser_kind: "cafe24")
 
-    assert_equal [ "EF" ], state.variants.map(&:name)
+    assert_empty state.variants
   end
 end

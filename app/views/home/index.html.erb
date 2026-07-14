@@ -39,8 +39,6 @@
             <p class="price"><%= listing.display_price ? "#{listing.display_price}원" : "가격 확인 중" %></p>
             <p class="muted">마지막 정상 확인: <%= listing.last_success_at ? l(listing.last_success_at, format: :long) : "아직 없음" %></p>
             <%= form_with model: subscription do |form| %>
-              <label>감시 옵션</label>
-              <%= form.select :variant_external_id, [["전체/기본", ""]] + listing.variants.map { |variant| ["#{variant.name} · #{variant.availability == 'in_stock' ? '재고 있음' : '품절'}", variant.external_id] } %>
               <label>목표 가격 (원)</label>
               <%= form.number_field :target_price, value: subscription.target_price_cents, min: 0, step: 1000, placeholder: "설정하지 않음" %>
               <label class="checkbox"><%= form.check_box :active %> 알림 활성화</label>

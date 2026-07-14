@@ -7,6 +7,7 @@ class ListingCollectorTest < ActiveSupport::TestCase
       external_id: "1", canonical_url: "https://www.myungdongmall.com/product/detail.html?product_no=1",
       title: "테스트 만년필", image_url: "https://example.com/pen.jpg", last_modified: "yesterday"
     )
+    listing.variants.create!(external_id: "EF", name: "EF촉", availability: "in_stock")
     html = <<~HTML
       <html><head><meta property="og:title" content="테스트 만년필"><meta property="product:price:amount" content="30,000"></head>
       <body><div class="xans-product-action"><a>구매하기</a></div></body></html>
@@ -27,6 +28,7 @@ class ListingCollectorTest < ActiveSupport::TestCase
     assert_nil received_headers[:etag]
     assert_nil received_headers[:last_modified]
     assert_equal "in_stock", listing.reload.status
+    assert_empty listing.variants
     assert_nil listing.pending_state
   end
 end

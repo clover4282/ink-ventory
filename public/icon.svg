@@ -1,3 +1,22 @@
-<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="256" cy="256" r="256" fill="red"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Ink-ventory fountain pen nib</title>
+  <defs>
+    <linearGradient id="background" x1="74" y1="38" x2="438" y2="474" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2367c9"/>
+      <stop offset="1" stop-color="#172033"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="12" y="12" width="488" height="488" rx="124" fill="#172033"/>
+  <rect x="28" y="28" width="456" height="456" rx="108" fill="url(#background)"/>
+  <circle cx="410" cy="104" r="82" fill="#fff" opacity=".07"/>
+
+  <path
+    fill="#f7f5ef"
+    d="M182 94h148c22 0 40 18 40 40v12l-34 174c-10 49-36 90-80 128-44-38-70-79-80-128l-34-174v-12c0-22 18-40 40-40Z"
+  />
+  <path fill="#e7b34b" d="M142 142h228l-8 40H150l-8-40Z"/>
+  <path fill="#dce7f7" d="m151 182 25 138c5 27 16 51 32 73l28-156-85-55Zm210 0-25 138c-5 27-16 51-32 73l-28-156 85-55Z"/>
+  <path fill="#174ea6" d="M256 191a31 31 0 1 1 0 62 31 31 0 0 1 0-62Z"/>
+  <path fill="#172033" d="M247 244h18v160l-9 12-9-12V244Z"/>
 </svg>

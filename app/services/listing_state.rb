@@ -4,8 +4,7 @@ ListingState = Data.define(:title, :currency, :base_price_cents, :availability, 
       "title" => title.to_s,
       "currency" => currency.to_s,
       "base_price_cents" => base_price_cents,
-      "availability" => availability.to_s,
-      "variants" => variants.sort_by { |variant| variant.external_id.to_s }.map(&:as_json)
+      "availability" => availability.to_s
     }
   end
 
@@ -17,14 +16,7 @@ ListingState = Data.define(:title, :currency, :base_price_cents, :availability, 
       base_price_cents: hash["base_price_cents"],
       availability: hash["availability"],
       image_url: nil,
-      variants: Array(hash["variants"]).map do |variant|
-        variant = variant.stringify_keys
-        VariantState.new(
-          external_id: variant["external_id"], name: variant["name"],
-          price_cents: variant["price_cents"], availability: variant["availability"],
-          visible_quantity: variant["visible_quantity"]
-        )
-      end
+      variants: []
     )
   end
 end

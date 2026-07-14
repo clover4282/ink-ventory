@@ -61,10 +61,9 @@ class ChangeDetectorTest < ActiveSupport::TestCase
     assert_equal 2, ChangeEvent.where(kind: "TARGET_REACHED").count
   end
 
-  test "daily digest only includes the subscribed option" do
-    @group.subscriptions.create!(listing: @listing, variant_external_id: "EF")
-    matching = @listing.change_events.create!(kind: "PRICE_CHANGED", variant_external_id: "EF", occurred_at: Time.current)
-    @listing.change_events.create!(kind: "PRICE_CHANGED", variant_external_id: "F", occurred_at: Time.current)
+  test "daily digest includes the subscribed product price change" do
+    @group.subscriptions.create!(listing: @listing)
+    matching = @listing.change_events.create!(kind: "PRICE_CHANGED", occurred_at: Time.current)
 
     delivery = DigestBuilder.call(@user)
 

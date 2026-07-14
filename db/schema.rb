@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_14_000003) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_14_000005) do
   create_table "change_events", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.json "current_value", default: {}, null: false
@@ -40,9 +40,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_14_000003) do
     t.index ["user_id"], name: "index_event_receipts_on_user_id"
   end
 
+  create_table "listing_likes", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "listing_id", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["listing_id", "user_id"], name: "index_listing_likes_on_listing_id_and_user_id", unique: true
+    t.index ["listing_id"], name: "index_listing_likes_on_listing_id"
+    t.index ["user_id"], name: "index_listing_likes_on_user_id"
+  end
+
   create_table "listings", force: :cascade do |t|
     t.bigint "base_price_cents"
     t.string "canonical_url", null: false
+    t.integer "clicks_count", default: 0, null: false
     t.integer "consecutive_errors", default: 0, null: false
     t.datetime "created_at", null: false
     t.string "currency", default: "KRW", null: false
@@ -53,6 +64,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_14_000003) do
     t.datetime "last_checked_at"
     t.string "last_modified"
     t.datetime "last_success_at"
+    t.integer "likes_count", default: 0, null: false
     t.datetime "next_check_at"
     t.datetime "pending_seen_at"
     t.json "pending_state"
@@ -338,6 +350,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_14_000003) do
   add_foreign_key "event_receipts", "change_events", on_delete: :cascade
   add_foreign_key "event_receipts", "mail_deliveries", on_delete: :nullify
   add_foreign_key "event_receipts", "users", on_delete: :cascade
+  add_foreign_key "listing_likes", "listings", on_delete: :cascade
+  add_foreign_key "listing_likes", "users", on_delete: :cascade
   add_foreign_key "listings", "sites", on_delete: :cascade
   add_foreign_key "mail_deliveries", "users", on_delete: :cascade
   add_foreign_key "notification_addresses", "users", on_delete: :cascade

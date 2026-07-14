@@ -30,7 +30,8 @@ class DevelopmentLoginTest < ActionDispatch::IntegrationTest
 
     assert_includes response.body, "현재 수집 만년필 1개"
     assert_includes response.body, "테스트 만년필"
-    assert_includes response.body, "EF촉"
+    assert_not_includes response.body, "EF촉"
+    assert_select "details.variants", count: 0
     assert_not_includes response.body, "수집 전 상품"
     assert_select ".product-image-placeholder", text: "이미지 수집 중", count: 1
   end
@@ -51,6 +52,9 @@ class DevelopmentLoginTest < ActionDispatch::IntegrationTest
     assert_select "img.product-image[src='https://images.example.test/public-pen.jpg'][loading='lazy']", count: 1
     assert_select "img.shop-logo", count: 1
     assert_select "form[data-auto-submit] input[name='q'][placeholder='만년필명 또는 판매처를 검색하세요']", count: 1
+    assert_select "link[rel='icon'][href='/icon.svg'][type='image/svg+xml']", count: 1
+    assert_select "link[rel='icon'][href='/icon.png'][type='image/png'][sizes='512x512']", count: 1
+    assert_select "link[rel='apple-touch-icon'][href='/icon.png']", count: 1
     assert_not_includes response.body, "상품 URL 등록"
   end
 
@@ -77,5 +81,30 @@ class DevelopmentLoginTest < ActionDispatch::IntegrationTest
 
     get root_path, params: { q: "펜갤러리아" }
     assert_includes response.body, "카웨코 스포츠 만년필"
+  end
+
+  test "finds separated search terms and small Korean typos" do
+    site = Site.create!(code: "pen-store", name: "펜 테스트", base_url: "https://pen.example.test", parser_kind: "cafe24")
+    separated = site.listings.create!(
+      external_id: "separated", canonical_url: "https://pen.example.test/separated",
+      title: "세일러 프로피트 금장 레알로 21K 만년필", last_success_at: Time.current
+    )
+    exact = site.listings.create!(
+      external_id: "exact", canonical_url: "https://pen.example.test/exact",
+      title: "세일러 프로피트 레알로 만년필", last_success_at: 1.minute.ago
+    )
+    alternate = site.listings.create!(
+      external_id: "alternate", canonical_url: "https://pen.example.test/alternate",
+      title: "세일러 프로피트 리알로 만년필", last_success_at: 2.minutes.ago
+    )
+
+    get root_path, params: { q: "프로피트 레알로" }
+    assert_includes response.body, "검색 결과 3개"
+    assert_equal [ exact.id.to_s, separated.id.to_s, alternate.id.to_s ], css_select("[data-catalog-card]:not([hidden])").map { |node| node["data-listing-id"] }
+    assert_select "[data-product-title='세일러 프로피트 금장 레알로 21K 만년필']", count: 1
+
+    get root_path, params: { q: "프로핏 리알로" }
+    assert_includes response.body, "검색 결과 3개"
+    assert_equal alternate.id.to_s, css_select("[data-catalog-card]:not([hidden])").first["data-listing-id"]
   end
 end

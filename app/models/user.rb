@@ -7,6 +7,7 @@ class User < ApplicationRecord
   has_many :search_attempts, dependent: :destroy
   has_many :mail_deliveries, dependent: :destroy
   has_many :event_receipts, dependent: :destroy
+  has_many :listing_likes, dependent: :destroy
 
   validates :provider, :uid, presence: true
   validates :uid, uniqueness: { scope: :provider }

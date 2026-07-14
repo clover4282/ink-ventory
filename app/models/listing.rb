@@ -5,6 +5,7 @@ class Listing < ApplicationRecord
   has_many :subscriptions, dependent: :destroy
   has_many :change_events, dependent: :destroy
   has_many :search_candidates, dependent: :destroy
+  has_many :listing_likes, dependent: :destroy
 
   validates :external_id, :canonical_url, presence: true
   validates :canonical_url, uniqueness: true

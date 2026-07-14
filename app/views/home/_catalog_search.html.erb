@@ -1,0 +1,10 @@
+<section class="catalog-search <%= "panel" unless local_assigns[:compact] %> <%= "hero-search" if local_assigns[:compact] %>">
+  <% unless local_assigns[:compact] %>
+    <p class="eyebrow">SEARCH CATALOG</p>
+    <h2>수집된 만년필 검색</h2>
+  <% end %>
+  <%= form_with url: root_path, method: :get, data: { auto_submit: true } do |form| %>
+    <%= form.search_field :q, value: @catalog_query, placeholder: "만년필명 또는 판매처를 검색하세요", maxlength: 100, autofocus: @catalog_query.present?, aria: { label: "수집된 만년필 검색" } %>
+    <%= form.submit "검색", class: "button primary" %>
+  <% end %>
+</section>

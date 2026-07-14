@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <title><%= content_for(:title) || "Ink-ventory" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag "application" %>
+    <%= javascript_include_tag "application", defer: true %>
+  </head>
+  <body>
+    <header class="site-header">
+      <%= link_to root_path, class: "brand" do %><span>Ink</span>-ventory<% end %>
+      <nav>
+        <% if current_user %>
+          <% if current_user.admin? %><%= link_to "운영", admin_path %><% end %>
+          <%= link_to "알림 이메일", edit_notification_address_path %>
+          <%= button_to "로그아웃", logout_path, method: :delete, class: "link-button" %>
+        <% end %>
+      </nav>
+    </header>
+    <main class="container">
+      <% if notice %><div class="flash notice"><%= notice %></div><% end %>
+      <% if alert %><div class="flash alert"><%= alert %></div><% end %>
+      <%= yield %>
+    </main>
+    <footer>
+      <%= link_to "이용약관", terms_path %> · <%= link_to "개인정보 처리방침", privacy_path %>
+      <span>상품 정보는 각 판매처 화면의 공개 정보를 기준으로 합니다.</span>
+    </footer>
+  </body>
+</html>

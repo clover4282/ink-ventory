@@ -1,0 +1,4 @@
+<h1>알림 이메일 인증</h1>
+<p>아래 버튼을 눌러 Ink-ventory 알림 주소를 인증해 주세요.</p>
+<p><%= link_to "이메일 인증하기", verify_notification_address_url(token: @address.verification_token) %></p>
+<p>요청하지 않았다면 이 메일을 무시하셔도 됩니다.</p>

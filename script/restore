@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+
+if [ "$#" -ne 1 ]; then
+  echo "usage: script/restore backups/daily/ink-ventory-TIMESTAMP.sqlite3" >&2
+  exit 1
+fi
+
+COMPOSE_FILE=${COMPOSE_FILE:-compose.production.yaml}
+DATABASE_PATH=${DATABASE_PATH:-/rails/storage/production.sqlite3}
+docker compose -f "$COMPOSE_FILE" cp "$1" web:/tmp/ink-ventory-restore.sqlite3
+docker compose -f "$COMPOSE_FILE" exec -T web sqlite3 "$DATABASE_PATH" ".restore '/tmp/ink-ventory-restore.sqlite3'"
+docker compose -f "$COMPOSE_FILE" exec -T web rm -f /tmp/ink-ventory-restore.sqlite3

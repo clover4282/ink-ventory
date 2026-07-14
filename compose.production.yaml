@@ -1,0 +1,29 @@
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      RAILS_ENV: production
+      SOLID_QUEUE_IN_PUMA: "1"
+    volumes:
+      - sqlite_data:/rails/storage
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    env_file: .env.production
+    depends_on:
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  sqlite_data:
+  caddy_data:
+  caddy_config:

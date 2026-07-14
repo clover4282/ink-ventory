@@ -1,0 +1,10 @@
+<% content_for :title, "알림 이메일 · Ink-ventory" %>
+<section class="narrow panel">
+  <p class="eyebrow">NOTIFICATION EMAIL</p><h1>알림 이메일 설정</h1>
+  <p>소셜 계정과 별개로, 재입고와 가격 알림을 받을 주소를 인증합니다.</p>
+  <%= form_with model: @notification_address, url: notification_address_path do |form| %>
+    <%= form.email_field :email, required: true, placeholder: "you@example.com" %>
+    <%= form.submit @notification_address.verified_at? ? "주소 변경 후 재인증" : "인증 메일 보내기", class: "button primary" %>
+  <% end %>
+  <% if @notification_address.verified_at? %><p class="status good">● 인증 완료 · <%= l(@notification_address.verified_at, format: :long) %></p><% end %>
+</section>

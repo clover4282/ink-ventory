@@ -1,0 +1,20 @@
+#!/bin/sh
+set -eu
+
+COMPOSE_FILE=${COMPOSE_FILE:-compose.production.yaml}
+BACKUP_DIR=${BACKUP_DIR:-./backups}
+DATABASE_PATH=${DATABASE_PATH:-/rails/storage/production.sqlite3}
+STAMP=$(date +%Y%m%d-%H%M%S)
+BACKUP_FILE="$BACKUP_DIR/daily/ink-ventory-$STAMP.sqlite3"
+
+mkdir -p "$BACKUP_DIR/daily" "$BACKUP_DIR/weekly"
+docker compose -f "$COMPOSE_FILE" exec -T web sqlite3 "$DATABASE_PATH" ".backup '/tmp/ink-ventory-backup.sqlite3'"
+docker compose -f "$COMPOSE_FILE" cp web:/tmp/ink-ventory-backup.sqlite3 "$BACKUP_FILE"
+docker compose -f "$COMPOSE_FILE" exec -T web rm -f /tmp/ink-ventory-backup.sqlite3
+
+if [ "$(date +%u)" = "7" ]; then
+  cp "$BACKUP_FILE" "$BACKUP_DIR/weekly/"
+fi
+
+find "$BACKUP_DIR/daily" -type f -mtime +7 -delete
+find "$BACKUP_DIR/weekly" -type f -mtime +28 -delete

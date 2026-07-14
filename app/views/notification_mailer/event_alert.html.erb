@@ -1,0 +1,7 @@
+<h1><%= event_label(@event.kind) %></h1>
+<p><strong><%= @event.listing.title %></strong> / <%= @event.listing.site.name %></p>
+<% if @event.variant_external_id.present? %><p>옵션: <%= @event.listing.variants.find_by(external_id: @event.variant_external_id)&.name || @event.variant_external_id %></p><% end %>
+<p>이전: <%= formatted_value(@event.previous_value["value"]) %><br>현재: <%= formatted_value(@event.current_value["value"]) %></p>
+<p>발생 시각: <%= l(@event.occurred_at, format: :long) %></p>
+<p><%= link_to "상품 보러 가기", @event.listing.canonical_url %></p>
+<p><%= link_to "이 상품 알림 해제", unsubscribe_subscription_url(@subscription, token: @address.unsubscribe_token) if @subscription %> · <%= link_to "전체 알림 중지", unsubscribe_notification_address_url(token: @address.unsubscribe_token) %></p>

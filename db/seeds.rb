@@ -1,0 +1,1 @@
+SiteRegistry.ensure_sites!

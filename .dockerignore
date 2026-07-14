@@ -1,0 +1,9 @@
+.git
+.github
+.serena
+.env*
+config/master.key
+log/*
+tmp/*
+backups
+coverage

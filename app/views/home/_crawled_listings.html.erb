@@ -1,0 +1,40 @@
+<section data-catalog-results>
+  <div class="section-title">
+    <h2 data-catalog-title><%= @catalog_query.present? ? "검색 결과 #{@crawled_listing_count}개" : "현재 수집 만년필 #{@crawled_listing_count}개" %></h2>
+    <span class="muted"><span data-catalog-summary><%= @catalog_query.present? ? "“#{@catalog_query}” · " : "최근 정상 확인순 최대 50개" %></span><%= link_to "전체 보기", root_path, data: { catalog_clear: true }, hidden: @catalog_query.blank? %></span>
+  </div>
+  <div class="empty" data-catalog-empty <%= "hidden" if @crawled_listing_count.positive? %>><%= @catalog_query.present? ? "검색 결과가 없습니다." : "아직 정상 수집된 상품이 없습니다." %></div>
+  <div class="cards" data-catalog-cards <%= "hidden" if @crawled_listing_count.zero? %>>
+      <% visible_count = 0 %>
+      <% @crawled_listings.each do |listing| %>
+        <% search_text = "#{listing.title} #{listing.site.name}".unicode_normalize(:nfc).downcase %>
+        <% matches = @catalog_query.blank? || search_text.include?(@catalog_query.downcase) %>
+        <% visible = matches && visible_count < 50 %>
+        <% visible_count += 1 if matches %>
+        <article class="product-card" data-catalog-card data-search-text="<%= search_text %>" data-listing-id="<%= listing.id %>" <%= "hidden" unless visible %>>
+          <% if listing.image_url.present? %>
+            <%= link_to listing.canonical_url, target: "_blank", rel: "noopener", class: "product-image-link" do %>
+              <%= image_tag listing.image_url, alt: listing.title, class: "product-image", loading: "lazy", referrerpolicy: "no-referrer" %>
+            <% end %>
+          <% else %>
+            <div class="product-image-link product-image-placeholder">이미지 수집 중</div>
+          <% end %>
+          <% logo_url = SiteRegistry.logo_url(listing.site.code) %>
+          <div class="card-top"><span class="shop"><%= image_tag logo_url, alt: "", class: "shop-logo", loading: "lazy", referrerpolicy: "no-referrer" if logo_url %><%= listing.site.name %></span><span class="status <%= listing.status == 'in_stock' ? 'good' : 'warning' %>"><%= {"in_stock" => "재고 있음", "out_of_stock" => "품절", "removed" => "판매 종료"}.fetch(listing.status, "확인 중") %></span></div>
+          <h3><%= link_to listing.title, listing.canonical_url, target: "_blank", rel: "noopener" %></h3>
+          <p class="price"><%= listing.display_price ? "#{listing.display_price}원" : "가격 확인 중" %></p>
+          <p class="muted">마지막 정상 확인: <%= l(listing.last_success_at, format: :long) %></p>
+          <% if listing.variants.any? %>
+            <details class="variants">
+              <summary>옵션 <%= listing.variants.size %>개 보기</summary>
+              <ul>
+                <% listing.variants.each do |variant| %>
+                  <li><span><%= variant.name %></span><small><%= {"in_stock" => "재고 있음", "out_of_stock" => "품절"}.fetch(variant.availability, "확인 중") %><%= " · 공개 수량 #{variant.visible_quantity}개" if variant.visible_quantity %><%= " · #{number_with_delimiter(variant.effective_price_cents)}원" if variant.effective_price_cents && variant.effective_price_cents != listing.base_price_cents %></small></li>
+                <% end %>
+              </ul>
+            </details>
+          <% end %>
+        </article>
+      <% end %>
+  </div>
+</section>

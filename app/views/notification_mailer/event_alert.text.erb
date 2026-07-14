@@ -1,0 +1,6 @@
+<%= event_label(@event.kind) %> - <%= @event.listing.title %> / <%= @event.listing.site.name %>
+이전: <%= formatted_value(@event.previous_value["value"]) %>
+현재: <%= formatted_value(@event.current_value["value"]) %>
+발생 시각: <%= l(@event.occurred_at, format: :long) %>
+상품: <%= @event.listing.canonical_url %>
+전체 알림 중지: <%= unsubscribe_notification_address_url(token: @address.unsubscribe_token) %>

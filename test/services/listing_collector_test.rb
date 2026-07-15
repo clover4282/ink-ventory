@@ -2,7 +2,7 @@ require "test_helper"
 
 class ListingCollectorTest < ActiveSupport::TestCase
   test "does not send validators while confirming a pending change" do
-    site = Site.create!(code: "penlog", name: "펜로그", base_url: "https://www.myungdongmall.com", parser_kind: "cafe24", min_delay_seconds: 0)
+    site = configured_site!(code: "penlog", name: "펜로그", base_url: "https://www.myungdongmall.com", parser_kind: "cafe24", min_delay_seconds: 0)
     listing = site.listings.create!(
       external_id: "1", canonical_url: "https://www.myungdongmall.com/product/detail.html?product_no=1",
       title: "테스트 만년필", image_url: "https://example.com/pen.jpg", last_modified: "yesterday"

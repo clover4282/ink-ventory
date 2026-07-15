@@ -37,7 +37,7 @@ class DevelopmentLoginTest < ActionDispatch::IntegrationTest
   end
 
   test "shows crawled listings without signing in" do
-    site = Site.create!(code: "bestpen", name: "공개 테스트", base_url: "https://public.example.test", parser_kind: "cafe24")
+    site = configured_site!(code: "bestpen", name: "공개 테스트", base_url: "https://public.example.test", parser_kind: "cafe24")
     site.listings.create!(
       external_id: "public-pen", canonical_url: "https://public.example.test/product/public-pen",
       title: "공개 만년필", status: "out_of_stock", base_price_cents: 45_000, last_success_at: Time.current,
@@ -59,8 +59,8 @@ class DevelopmentLoginTest < ActionDispatch::IntegrationTest
   end
 
   test "filters the public catalog by product or store name" do
-    bestpen = Site.create!(code: "bestpen", name: "베스트펜", base_url: "https://bestpen.example.test", parser_kind: "makeshop")
-    galleria = Site.create!(code: "pengalleria", name: "펜갤러리아", base_url: "https://galleria.example.test", parser_kind: "makeshop")
+    bestpen = configured_site!(code: "bestpen", name: "베스트펜", base_url: "https://bestpen.example.test", parser_kind: "makeshop")
+    galleria = configured_site!(code: "pengalleria", name: "펜갤러리아", base_url: "https://galleria.example.test", parser_kind: "makeshop")
     lamy = bestpen.listings.create!(external_id: "lamy", canonical_url: "https://bestpen.example.test/lamy", title: "라미 사파리 만년필", last_success_at: Time.current)
     kaweco = galleria.listings.create!(external_id: "kaweco", canonical_url: "https://galleria.example.test/kaweco", title: "카웨코 스포츠 만년필", last_success_at: Time.current)
 

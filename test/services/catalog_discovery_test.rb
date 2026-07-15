@@ -2,7 +2,7 @@ require "test_helper"
 
 class CatalogDiscoveryTest < ActiveSupport::TestCase
   test "discovers the fountain pen category and paginated products" do
-    site = Site.create!(code: "bestpen", name: "베스트펜", base_url: "https://bestpen.kr", parser_kind: "makeshop", min_delay_seconds: 0)
+    site = configured_site!(code: "bestpen", name: "베스트펜", base_url: "https://bestpen.kr", parser_kind: "makeshop", min_delay_seconds: 0)
     responses = {
       "https://bestpen.kr" => response("https://bestpen.kr", "<html></html>"),
       "https://bestpen.kr/shop/shopbrand.html?xcode=038&mcode=002&type=Y" => response("https://bestpen.kr/shop/shopbrand.html?xcode=038&mcode=002&type=Y", <<~HTML),
@@ -26,7 +26,7 @@ class CatalogDiscoveryTest < ActiveSupport::TestCase
   end
 
   test "keeps fountain pen sets and excludes penlog accessories" do
-    site = Site.create!(code: "penlog", name: "펜로그", base_url: "https://www.myungdongmall.com", parser_kind: "cafe24", min_delay_seconds: 0)
+    site = configured_site!(code: "penlog", name: "펜로그", base_url: "https://www.myungdongmall.com", parser_kind: "cafe24", min_delay_seconds: 0)
     search_url = SiteRegistry.search_url(site, "만년필")
     responses = {
       site.base_url => response(site.base_url, "<html></html>"),
@@ -49,7 +49,7 @@ class CatalogDiscoveryTest < ActiveSupport::TestCase
   end
 
   test "excludes accessories incorrectly assigned to a fountain pen category" do
-    site = Site.create!(code: "blueblack", name: "블루블랙", base_url: "https://www.blueblack.co.kr", parser_kind: "cafe24", min_delay_seconds: 0)
+    site = configured_site!(code: "blueblack", name: "블루블랙", base_url: "https://www.blueblack.co.kr", parser_kind: "cafe24", min_delay_seconds: 0)
     catalog_url = "https://www.blueblack.co.kr/product/list.html?cate_no=192"
     responses = {
       site.base_url => response(site.base_url, "<html></html>"),

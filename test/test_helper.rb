@@ -11,5 +11,8 @@ module ActiveSupport
     fixtures :all
 
     # Add more helper methods to be used by all tests here...
+    def configured_site!(**attributes)
+      Site.find_or_initialize_by(code: attributes.fetch(:code)).tap { |site| site.update!(attributes) }
+    end
   end
 end

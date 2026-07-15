@@ -1,6 +1,7 @@
 Rails.application.routes.draw do
   root "home#index"
   get "up" => "rails/health#show", as: :rails_health_check
+  get "/changes", to: "changes#index", as: :changes
 
   post "/login", to: "sessions#create", as: :login
   post "/login/verify", to: "sessions#verify", as: :verify_login

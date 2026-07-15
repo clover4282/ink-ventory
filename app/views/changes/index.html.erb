@@ -1,0 +1,44 @@
+<% content_for :title, "입고·품절·가격 변동 - Ink-ventory" %>
+<% event_labels = { "RESTOCKED" => "재입고", "SOLD_OUT" => "품절", "PRICE_CHANGED" => "가격 변경" } %>
+<% status_labels = { "in_stock" => "재고 있음", "out_of_stock" => "품절", "removed" => "판매 종료", "unknown" => "확인 중" } %>
+
+<section class="welcome">
+  <div>
+    <p class="eyebrow">RECENT CHANGES</p>
+    <h1>입고·품절·가격 변동</h1>
+    <p class="muted">수집 후 재확인된 최근 변화만 보여드립니다.</p>
+  </div>
+</section>
+
+<% if @change_events.empty? %>
+  <div class="empty">아직 확인된 입고·품절·가격 변동이 없습니다.</div>
+<% else %>
+  <div class="change-list public-change-list">
+    <% @change_events.each do |event| %>
+      <% listing = event.listing %>
+      <% before = event.previous_value["value"] %>
+      <% after = event.current_value["value"] %>
+      <% before_text = event.kind == "PRICE_CHANGED" ? "#{number_with_delimiter(before)}원" : status_labels.fetch(before, before.to_s) %>
+      <% after_text = event.kind == "PRICE_CHANGED" ? "#{number_with_delimiter(after)}원" : status_labels.fetch(after, after.to_s) %>
+      <article class="change-event panel public-change" data-change-event="<%= event.kind %>">
+        <%= link_to listing_path(listing), class: "public-change-image" do %>
+          <% if listing.image_url.present? %>
+            <%= image_tag listing.image_url, alt: listing.title, class: "product-image", loading: "lazy", referrerpolicy: "no-referrer" %>
+          <% else %>
+            <span class="product-image-placeholder">이미지 수집 중</span>
+          <% end %>
+        <% end %>
+        <div>
+          <% logo_url = SiteRegistry.logo_url(listing.site.code) %>
+          <span class="shop"><%= image_tag logo_url, alt: "", class: "shop-logo", referrerpolicy: "no-referrer" if logo_url %><%= listing.site.name %></span>
+          <h2><%= link_to listing.title.presence || "상품 정보 확인 중", listing_path(listing) %></h2>
+          <header>
+            <strong><%= event_labels.fetch(event.kind) %></strong>
+            <time datetime="<%= event.occurred_at.iso8601 %>" class="muted"><%= l(event.occurred_at, format: :long) %></time>
+          </header>
+          <p><%= before_text %> → <%= after_text %></p>
+        </div>
+      </article>
+    <% end %>
+  </div>
+<% end %>

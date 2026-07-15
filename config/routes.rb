@@ -2,8 +2,8 @@ Rails.application.routes.draw do
   root "home#index"
   get "up" => "rails/health#show", as: :rails_health_check
 
-  get "/auth/:provider/callback", to: "sessions#create"
-  get "/auth/failure", to: "sessions#failure"
+  post "/login", to: "sessions#create", as: :login
+  post "/login/verify", to: "sessions#verify", as: :verify_login
   post "/development/login", to: "sessions#development", as: :development_login if Rails.env.local?
   delete "/logout", to: "sessions#destroy", as: :logout
 
@@ -15,7 +15,7 @@ Rails.application.routes.draw do
     post :like, on: :member
   end
   resources :searches, only: %i[create show]
-  resources :subscriptions, only: %i[create update destroy]
+  resources :subscriptions, only: %i[index create destroy]
   get "/subscriptions/:id/unsubscribe", to: "subscriptions#unsubscribe", as: :unsubscribe_subscription
   resource :account, only: :destroy
 

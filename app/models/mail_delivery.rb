@@ -1,5 +1,5 @@
 class MailDelivery < ApplicationRecord
-  STATUSES = %w[pending processing sent failed].freeze
+  STATUSES = %w[pending processing sent failed canceled].freeze
 
   belongs_to :user, optional: true
   has_many :event_receipts, dependent: :nullify

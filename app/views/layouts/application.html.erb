@@ -14,10 +14,11 @@
   <body>
     <header class="site-header">
       <%= link_to root_path, class: "brand" do %><span>Ink</span>-ventory<% end %>
-      <nav>
+      <nav class="site-nav" aria-label="주 메뉴">
         <% if current_user %>
-          <% if current_user.admin? %><%= link_to "운영", admin_path %><% end %>
-          <%= link_to "알림 이메일", edit_notification_address_path %>
+          <% if current_user.admin? %><%= link_to "운영", admin_path, class: ("active" if request.path.start_with?("/admin")), aria: { current: ("page" if request.path.start_with?("/admin")) } %><% end %>
+          <%= link_to "관심 상품", subscriptions_path, class: ("active" if current_page?(subscriptions_path)), aria: { current: ("page" if current_page?(subscriptions_path)) } %>
+          <%= link_to "이메일 설정", edit_notification_address_path, class: ("active" if current_page?(edit_notification_address_path)), aria: { current: ("page" if current_page?(edit_notification_address_path)) } %>
           <%= button_to "로그아웃", logout_path, method: :delete, class: "link-button" %>
         <% end %>
       </nav>

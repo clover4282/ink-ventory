@@ -7,7 +7,7 @@ class DevelopmentLoginTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
     follow_redirect!
     assert_response :success
-    assert_includes response.body, "개발자님의 관심 상품"
+    assert_includes response.body, "개발자님의 만년필 찾기"
     assert_not_includes response.body, "상품 URL 등록"
     assert_not_includes response.body, "제품명 통합 검색"
 

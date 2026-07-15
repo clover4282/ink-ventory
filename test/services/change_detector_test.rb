@@ -56,6 +56,17 @@ class ChangeDetectorTest < ActiveSupport::TestCase
     assert_equal event.id, MailDelivery.first.metadata["event_id"]
   end
 
+  test "notifies subscribers immediately when an in-stock product sells out" do
+    @group.subscriptions.create!(listing: @listing)
+    time = Time.zone.parse("2026-07-15 12:00")
+    ChangeDetector.observe(@listing, state(price: 100_000, availability: "in_stock"), at: time)
+
+    confirm(state(price: 100_000, availability: "out_of_stock"), time + 2.minutes)
+
+    event = ChangeEvent.find_by!(kind: "SOLD_OUT")
+    assert_equal [ event.id ], MailDelivery.pluck(:metadata).pluck("event_id")
+  end
+
   test "notifies each subscriber once while collecting a shared listing once" do
     @group.subscriptions.create!(listing: @listing)
     second = User.create!(provider: "kakao", uid: "user-2", name: "둘째")
@@ -73,27 +84,30 @@ class ChangeDetectorTest < ActiveSupport::TestCase
     assert_equal 2, MailDelivery.count
   end
 
-  test "target price fires only on downward crossing and rearms above target" do
+  test "ignores legacy target prices and creates only price change events" do
     subscription = @group.subscriptions.create!(listing: @listing, target_price_cents: 80_000)
     time = Time.zone.parse("2026-07-14 12:00")
     ChangeDetector.observe(@listing, state(price: 100_000), at: time)
 
     confirm(state(price: 70_000), time + 2.minutes)
-    assert_equal 1, ChangeEvent.where(kind: "TARGET_REACHED").count
-    assert_not subscription.reload.target_armed?
-
-    confirm(state(price: 90_000), time + 5.minutes)
+    assert_empty ChangeEvent.where(kind: "TARGET_REACHED")
+    assert_equal [ "PRICE_CHANGED" ], MailDelivery.order(:id).map { |delivery| ChangeEvent.find(delivery.metadata["event_id"]).kind }
     assert subscription.reload.target_armed?
-    confirm(state(price: 70_000), time + 8.minutes)
-    assert_equal 2, ChangeEvent.where(kind: "TARGET_REACHED").count
   end
 
-  test "daily digest excludes the subscribed product price change" do
+  test "does not build daily digest mail" do
     @group.subscriptions.create!(listing: @listing)
-    @listing.change_events.create!(kind: "PRICE_CHANGED", occurred_at: Time.current)
+    @listing.change_events.create!(kind: "SOLD_OUT", occurred_at: Time.current)
+    @listing.change_events.create!(kind: "REMOVED", occurred_at: Time.current)
 
     assert_nil DigestBuilder.call(@user)
     assert_empty MailDelivery.all
+  end
+
+  test "does not schedule daily digest generation" do
+    config = YAML.safe_load(ERB.new(Rails.root.join("config/recurring.yml").read).result, aliases: true)
+
+    assert_not config.fetch("development").key?("build_daily_digests")
   end
 
   private

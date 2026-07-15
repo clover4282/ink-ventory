@@ -1,4 +1,9 @@
 class NotificationMailer < ApplicationMailer
+  def login_code(email, code)
+    @code = code
+    mail(to: email, subject: "[Ink-ventory] 로그인 인증번호")
+  end
+
   def verification(delivery)
     @delivery = delivery
     @address = delivery.user.notification_address

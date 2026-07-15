@@ -4,9 +4,18 @@ class CatalogInteractionsTest < ActionDispatch::IntegrationTest
   setup do
     @site = Site.create!(code: "catalog-test", name: "카탈로그 테스트", base_url: "https://catalog.example.test", parser_kind: "cafe24")
     @listing = @site.listings.create!(
-      external_id: "popular", canonical_url: "https://catalog.example.test/popular",
+      external_id: "popular", canonical_url: "https://bestpen.kr/shop/shopdetail.html?branduid=popular",
       title: "인기 만년필", status: "in_stock", base_price_cents: 35_000, last_success_at: Time.current
     )
+  end
+
+  test "hides an unsafe external purchase link" do
+    @listing.update_column(:canonical_url, "https://malicious.example.test/product")
+
+    get listing_path(@listing)
+
+    assert_response :success
+    assert_select "a", text: "판매처에서 구매하기", count: 0
   end
 
   test "shows public product details and confirmed stock and price history" do
@@ -31,7 +40,7 @@ class CatalogInteractionsTest < ActionDispatch::IntegrationTest
     assert_select ".detail-copy .new-badge", text: "NEW"
     assert_select "[data-like-notice][hidden]"
     assert_select "button[data-like-login-required][aria-pressed='false']"
-    assert_select ".like-explanation", text: /재입고와 가격 변동을 모두 즉시.*인증한 이메일/
+    assert_select ".like-explanation", text: /재입고·품절·가격 변동을 즉시.*인증한 이메일/
     assert_select "a[href='#{@listing.canonical_url}'][target='_blank']", text: "판매처에서 구매하기"
     assert_select "[data-change-event='PRICE_CHANGED']", text: /40,000원.*35,000원/
     assert_select "[data-change-event='RESTOCKED']", text: /품절.*재고 있음/
@@ -66,13 +75,34 @@ class CatalogInteractionsTest < ActionDispatch::IntegrationTest
     assert_difference "MailDelivery.count", 1 do
       ImmediateNotificationBuilder.call(price_change)
     end
-    assert_equal [ "event", "event" ], user.mail_deliveries.order(:id).pluck(:kind)
+    sold_out = @listing.change_events.create!(kind: "SOLD_OUT", occurred_at: Time.current)
+    assert_difference "MailDelivery.count", 1 do
+      ImmediateNotificationBuilder.call(sold_out)
+    end
+    assert_equal [ "event", "event", "event" ], user.mail_deliveries.order(:id).pluck(:kind)
 
     assert_difference "ListingLike.count", -1 do
       post like_listing_path(@listing)
     end
     assert_equal({ "liked" => false, "count" => 0 }, response.parsed_body)
     assert_not user.subscriptions.exists?(listing: @listing, variant_external_id: "")
+  end
+
+  test "limits active interests to ten without creating the eleventh like" do
+    post development_login_path
+    user = User.find_by!(provider: "development", uid: "local")
+    group = user.watch_groups.find_by!(name: "관심 상품")
+    10.times do |index|
+      listing = @site.listings.create!(external_id: "limited-#{index}", canonical_url: "https://catalog.example.test/limited-#{index}")
+      group.subscriptions.create!(listing: listing, variant_external_id: "")
+    end
+
+    assert_no_difference [ "Subscription.count", "ListingLike.count" ] do
+      post like_listing_path(@listing), as: :json
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal({ "error" => "관심 상품은 최대 10개까지 등록할 수 있습니다." }, response.parsed_body)
   end
 
   test "renders filter and sorting data for the preloaded catalog" do

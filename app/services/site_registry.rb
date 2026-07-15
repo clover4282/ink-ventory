@@ -71,6 +71,13 @@ class SiteRegistry
     CONFIG.values.any? { |config| config[:hosts].include?(host.to_s.downcase) }
   end
 
+  def self.safe_external_url(raw_url)
+    uri = URI.parse(raw_url.to_s)
+    uri.to_s if uri.is_a?(URI::HTTPS) && allowed_host?(uri.host)
+  rescue URI::InvalidURIError
+    nil
+  end
+
   def self.product_id_from_path(path, parser_kind)
     return path[%r{/product/(?:[^/]+/)?(\d+)(?:/|\z)}, 1] if parser_kind == "cafe24"
     path[%r{/(\d+)(?:/|\z)}, 1]

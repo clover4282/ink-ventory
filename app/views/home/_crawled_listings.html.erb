@@ -1,34 +1,35 @@
 <section data-catalog-results>
   <div class="flash notice catalog-notice" data-catalog-notice tabindex="-1" hidden></div>
   <div class="catalog-controls panel" data-catalog-controls>
-    <label>판매처
-      <select data-catalog-control data-filter-site><option value="">전체 판매처</option><%= options_from_collection_for_select(@catalog_sites, :id, :name) %></select>
-    </label>
-    <label>재고 상태
-      <select data-catalog-control data-filter-status><option value="">전체 상태</option><option value="in_stock">재고 있음</option><option value="out_of_stock">품절</option></select>
-    </label>
-    <label>최소 가격
-      <input type="number" min="0" step="1000" placeholder="0원" data-catalog-control data-filter-min-price>
-    </label>
-    <label>최대 가격
-      <input type="number" min="0" step="1000" placeholder="제한 없음" data-catalog-control data-filter-max-price>
-    </label>
-    <label class="checkbox catalog-restocked"><input type="checkbox" data-catalog-control data-filter-restocked> 최근 10일 재입고</label>
-    <label>정렬
-      <select data-catalog-control data-catalog-sort>
-        <option value="relevance">기본·검색 정확도순</option>
-        <option value="popularity">인기도순</option>
-        <option value="newest">최신 등록순</option>
-        <option value="likes">좋아요순</option>
-        <option value="price_asc">가격 낮은순</option>
-        <option value="price_desc">가격 높은순</option>
-        <option value="restocked">최근 재입고순</option>
-      </select>
-    </label>
+    <div class="filter-heading"><strong>필터 및 정렬</strong><%= link_to "초기화", root_path, class: "filter-clear", data: { catalog_clear: true }, hidden: @catalog_query.blank? %></div>
+    <div class="filter-grid">
+      <label>판매처
+        <select data-catalog-control data-filter-site><option value="">전체 판매처</option><%= options_from_collection_for_select(@catalog_sites, :id, :name) %></select>
+      </label>
+      <label>재고
+        <select data-catalog-control data-filter-status><option value="">전체 상태</option><option value="in_stock">재고 있음</option><option value="out_of_stock">품절</option></select>
+      </label>
+      <fieldset class="price-range">
+        <legend>가격</legend>
+        <div><input type="number" min="0" step="1000" placeholder="최소" aria-label="최소 가격" data-catalog-control data-filter-min-price><span>–</span><input type="number" min="0" step="1000" placeholder="최대" aria-label="최대 가격" data-catalog-control data-filter-max-price></div>
+      </fieldset>
+      <label class="checkbox catalog-restocked"><input type="checkbox" data-catalog-control data-filter-restocked> 최근 10일 재입고</label>
+      <label>정렬
+        <select data-catalog-control data-catalog-sort>
+          <option value="relevance">기본·검색 정확도순</option>
+          <option value="popularity">인기도순</option>
+          <option value="newest">최신 등록순</option>
+          <option value="likes">좋아요순</option>
+          <option value="price_asc">가격 낮은순</option>
+          <option value="price_desc">가격 높은순</option>
+          <option value="restocked">최근 재입고순</option>
+        </select>
+      </label>
+    </div>
   </div>
   <div class="section-title">
     <h2 data-catalog-title><%= @catalog_query.present? ? "검색 결과 #{@crawled_listing_count}개" : "현재 수집 만년필 #{@crawled_listing_count}개" %></h2>
-    <span class="muted"><span data-catalog-summary><%= @catalog_query.present? ? "“#{@catalog_query}” · " : "최근 정상 확인순 최대 50개" %></span><%= link_to "전체 보기", root_path, data: { catalog_clear: true }, hidden: @catalog_query.blank? %></span>
+    <span class="muted" data-catalog-summary><%= @catalog_query.present? ? "“#{@catalog_query}” · " : "최근 정상 확인순 최대 50개" %></span>
   </div>
   <div class="empty" data-catalog-empty <%= "hidden" if @crawled_listing_count.positive? %>><%= @catalog_query.present? ? "검색 결과가 없습니다." : "아직 정상 수집된 상품이 없습니다." %></div>
   <div class="cards" data-catalog-cards <%= "hidden" if @crawled_listing_count.zero? %>>

@@ -1,8 +1,10 @@
+name: ink-ventory-production
+
 services:
   web:
     build: .
     restart: unless-stopped
-    env_file: .env.production
+    env_file: .env
     environment:
       RAILS_ENV: production
       SOLID_QUEUE_IN_PUMA: "1"
@@ -12,7 +14,7 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
-    env_file: .env.production
+    env_file: .env
     depends_on:
       - web
     ports:

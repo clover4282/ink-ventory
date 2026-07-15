@@ -4,17 +4,25 @@
     <h1>찾던 만년필이 돌아오는 순간,<br><span>놓치지 마세요.</span></h1>
     <p>베스트펜·블루블랙·펜갤러리아·펜로그의 만년필 재고와 가격 변화를 한곳에서 확인하고 이메일로 받아보세요.</p>
     <%= render "catalog_search", compact: true %>
-    <div class="login-actions">
+    <div class="email-login">
+      <%= form_with url: login_path do |form| %>
+        <%= form.email_field :email, value: session[:login_email], required: true, autocomplete: "email", placeholder: "이메일 주소", aria: { label: "로그인 이메일" } %>
+        <%= form.submit "인증번호 받기", class: "button primary" %>
+      <% end %>
+      <% if session[:login_email].present? %>
+        <%= form_with url: verify_login_path, class: "email-code-form" do |form| %>
+          <%= form.hidden_field :email, value: session[:login_email] %>
+          <%= form.text_field :code, required: true, inputmode: "numeric", autocomplete: "one-time-code", maxlength: 6, pattern: "[0-9]{6}", placeholder: "6자리 인증번호", aria: { label: "6자리 인증번호" } %>
+          <%= form.submit "로그인", class: "button primary" %>
+        <% end %>
+      <% end %>
       <% if Rails.env.local? %><%= button_to "개발자 모드로 시작하기", development_login_path, class: "button secondary" %><% end %>
-      <% if ENV["GOOGLE_CLIENT_ID"].present? %><%= button_to "Google로 시작하기", "/auth/google_oauth2", class: "button primary" %><% end %>
-      <% if ENV["KAKAO_CLIENT_ID"].present? %><%= button_to "Kakao로 시작하기", "/auth/kakao", class: "button kakao" %><% end %>
-      <% if ENV["GOOGLE_CLIENT_ID"].blank? && ENV["KAKAO_CLIENT_ID"].blank? %><p class="muted">소셜 로그인 키를 설정하면 로그인 버튼이 표시됩니다.</p><% end %>
     </div>
   </section>
   <%= render "crawled_listings" %>
 <% else %>
   <section class="welcome">
-    <div><p class="eyebrow">DASHBOARD</p><h1><%= current_user.name %>님의 관심 상품</h1></div>
+    <div><p class="eyebrow">FOUNTAIN PEN SEARCH</p><h1><%= current_user.name %>님의 만년필 찾기</h1></div>
     <% if current_user.verified_for_notifications? %>
       <span class="status good">● <%= current_user.notification_address.email %> 인증됨</span>
     <% else %>
@@ -25,39 +33,5 @@
   <%= render "catalog_search" %>
   <%= render "crawled_listings" %>
 
-  <section>
-    <div class="section-title"><h2>구독 중 <%= @subscriptions.size %>개</h2></div>
-    <% if @subscriptions.empty? %>
-      <div class="empty">위에서 첫 관심 상품을 등록해 보세요.</div>
-    <% else %>
-      <div class="cards">
-        <% @subscriptions.each do |subscription| %>
-          <% listing = subscription.listing %>
-          <article class="product-card">
-            <div class="card-top"><span class="shop"><%= listing.site.name %></span><span class="status <%= listing.status == 'in_stock' ? 'good' : 'warning' %>"><%= {"in_stock" => "재고 있음", "out_of_stock" => "품절", "removed" => "판매 종료"}.fetch(listing.status, "확인 중") %></span></div>
-            <h3><%= link_to listing.title.presence || "상품 정보 확인 중", listing.canonical_url, target: "_blank", rel: "noopener" %></h3>
-            <p class="price"><%= listing.display_price ? "#{listing.display_price}원" : "가격 확인 중" %></p>
-            <p class="muted">마지막 정상 확인: <%= listing.last_success_at ? l(listing.last_success_at, format: :long) : "아직 없음" %></p>
-            <%= form_with model: subscription do |form| %>
-              <label>목표 가격 (원)</label>
-              <%= form.number_field :target_price, value: subscription.target_price_cents, min: 0, step: 1000, placeholder: "설정하지 않음" %>
-              <label class="checkbox"><%= form.check_box :active %> 알림 활성화</label>
-              <%= form.submit "저장", class: "button small" %>
-            <% end %>
-            <%= button_to "삭제", subscription_path(subscription), method: :delete, class: "button danger small" %>
-          </article>
-        <% end %>
-      </div>
-    <% end %>
-  </section>
-
-  <% if @recent_events.any? %>
-    <section class="panel history"><h2>최근 변경 이력</h2>
-      <table><thead><tr><th>시각</th><th>상품</th><th>판매처</th><th>변경</th></tr></thead><tbody>
-      <% @recent_events.each do |event| %><tr><td><%= l(event.occurred_at, format: :long) %></td><td><%= event.listing.title %></td><td><%= event.listing.site.name %></td><td><%= event.kind %></td></tr><% end %>
-      </tbody></table>
-    </section>
-  <% end %>
-
-  <details class="danger-zone"><summary>계정 관리</summary><p>탈퇴하면 소셜 식별자, 이메일, 구독 및 개인 발송 기록이 삭제됩니다.</p><%= button_to "회원 탈퇴", account_path, method: :delete, class: "button danger", form: { data: { turbo_confirm: "정말 탈퇴할까요?" } } %></details>
+  <details class="danger-zone"><summary>계정 관리</summary><p>탈퇴하면 로그인 이메일, 구독 및 개인 발송 기록이 삭제됩니다.</p><%= button_to "회원 탈퇴", account_path, method: :delete, class: "button danger", form: { data: { turbo_confirm: "정말 탈퇴할까요?" } } %></details>
 <% end %>

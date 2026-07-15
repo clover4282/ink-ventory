@@ -4,8 +4,12 @@ class SendMailDeliveryJob < ApplicationJob
   def perform(delivery_id)
     delivery = MailDelivery.find(delivery_id)
     delivery.with_lock do
-      return if delivery.status == "sent"
+      return if delivery.status.in?(%w[sent canceled])
       return if delivery.status == "processing" && delivery.updated_at > 30.minutes.ago
+      unless delivery.kind == "verification" || notifications_allowed?(delivery)
+        delivery.update!(status: "canceled", last_error: nil)
+        return
+      end
       delivery.update!(status: "processing", attempts: delivery.attempts + 1, last_error: nil)
     end
 
@@ -23,4 +27,10 @@ class SendMailDeliveryJob < ApplicationJob
     end
     Rails.logger.error("mail delivery failed id=#{delivery_id}: #{error.class}: #{error.message}")
   end
+
+  private
+    def notifications_allowed?(delivery)
+      address = delivery.user&.notification_address
+      address&.verified_at? && address.notifications_enabled? && address.email == delivery.recipient
+    end
 end

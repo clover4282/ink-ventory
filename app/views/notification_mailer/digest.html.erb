@@ -3,6 +3,8 @@
   <h2><%= event_label(event.kind) %> · <%= event.listing.title %></h2>
   <p><%= event.listing.site.name %> · <%= l(event.occurred_at, format: :long) %></p>
   <p>이전: <%= formatted_value(event.previous_value["value"]) %> → 현재: <%= formatted_value(event.current_value["value"]) %></p>
-  <p><%= link_to "상품 보러 가기", event.listing.canonical_url %></p>
+  <% if (product_url = SiteRegistry.safe_external_url(event.listing.canonical_url)) %>
+    <p><%= link_to "상품 보러 가기", product_url %></p>
+  <% end %>
 <% end %>
 <p><%= link_to "전체 알림 중지", unsubscribe_notification_address_url(token: @address.unsubscribe_token) %></p>

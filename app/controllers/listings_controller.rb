@@ -21,7 +21,9 @@ class ListingsController < ApplicationController
     group = current_user.watch_groups.first_or_create!(name: "관심 상품")
     group.subscriptions.find_or_create_by!(listing: listing, variant_external_id: "")
     CollectListingJob.perform_later(listing.id) if listing.current_state.blank?
-    redirect_to root_path, notice: "관심 상품을 등록했습니다. 첫 확인 뒤 상태가 표시됩니다."
+    redirect_to subscriptions_path, notice: "관심 상품을 등록했습니다. 첫 확인 뒤 상태가 표시됩니다."
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_to root_path, alert: error.record.errors.full_messages.first
   rescue SiteRegistry::UnsupportedUrl => error
     redirect_to root_path, alert: error.message
   end
@@ -43,5 +45,7 @@ class ListingsController < ApplicationController
     end
 
     render json: { liked: like.nil?, count: listing.reload.likes_count }
+  rescue ActiveRecord::RecordInvalid => error
+    render json: { error: error.record.errors.full_messages.first }, status: :unprocessable_entity
   end
 end

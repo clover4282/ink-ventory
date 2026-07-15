@@ -14,9 +14,5 @@ class HomeController < ApplicationController
     @catalog_sites = @crawled_listings.map(&:site).uniq(&:id).sort_by(&:name)
     @recent_restocked_at = ChangeEvent.versioned.where(listing_id: listing_ids, kind: "RESTOCKED", occurred_at: 10.days.ago..).group(:listing_id).maximum(:occurred_at)
     @liked_listing_ids = current_user ? ListingLike.where(user: current_user, listing_id: listing_ids).pluck(:listing_id).index_with(true) : {}
-    return unless current_user
-    @subscriptions = current_user.subscriptions.includes(listing: :site).order(created_at: :desc)
-    @search_watches = current_user.search_watches.includes(search_query: { search_candidates: { listing: :site } })
-    @recent_events = ChangeEvent.where(listing_id: @subscriptions.select(:listing_id)).includes(listing: :site).order(occurred_at: :desc).limit(20)
   end
 end

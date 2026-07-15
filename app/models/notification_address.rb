@@ -3,7 +3,10 @@ class NotificationAddress < ApplicationRecord
 
   before_validation :ensure_tokens
 
+  normalizes :email, with: ->(email) { email.to_s.strip.downcase }
+
   validates :email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }
+  validates :email, uniqueness: { case_sensitive: false }
   validates :verification_token, :unsubscribe_token, presence: true, uniqueness: true
 
   def verify!

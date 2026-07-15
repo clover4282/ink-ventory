@@ -5,7 +5,7 @@
 ## 구성
 
 - Ruby 3.4 / Rails 8.1 / SQLite
-- 서버 렌더링 HTML, Google·Kakao OAuth
+- 서버 렌더링 HTML, 이메일 인증번호 로그인
 - `Net::HTTP` + Nokogiri 수집기 (별도 브라우저 없음)
 - SQLite 기반 Solid Queue 작업 처리
 - 개발: Rails 단일 컨테이너
@@ -28,10 +28,9 @@ docker compose up
 - 매분: 기한이 된 상품 수집, 변화 재확인, 메일 재시도
 - 매일 01:00 KST: 네 쇼핑몰의 만년필 카테고리에서 신규 상품 발견
 - 매일 02:00 KST: 저장된 검색어의 신규 후보 확인
-- 매일 20:00 KST: 사용자별 요약 생성
 - 매일 03:00 KST: 30일 지난 발송 로그 정리
 
-개발 환경 메일은 실제로 발송하지 않고 `tmp/mails`에 저장됩니다.
+개발 환경은 SMTP 자격 증명이 없으면 메일을 `tmp/mails`에 저장하고, `.env`에 자격 증명이 있으면 SES로 발송합니다.
 
 ### 테스트
 
@@ -40,23 +39,11 @@ docker compose run --rm -e RAILS_ENV=test web bin/rails db:prepare
 docker compose run --rm -e RAILS_ENV=test web bin/rails test
 ```
 
-### Google / Kakao 로그인
+### 이메일 로그인
 
-`.env`에 각 공급자의 키를 넣습니다. 키가 비어 있으면 해당 로그인 버튼을 숨깁니다.
+사용자는 이메일로 받은 6자리 인증번호를 입력해 로그인합니다. 인증번호는 10분 동안 한 번만 사용할 수 있으며, 로그인 이메일을 재입고·품절·가격 알림 주소로 함께 사용합니다.
 
-```dotenv
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-KAKAO_CLIENT_ID=...
-KAKAO_CLIENT_SECRET=...
-```
-
-개발 콜백 URL은 다음과 같습니다.
-
-- Google: `http://localhost:3300/auth/google_oauth2/callback`
-- Kakao: `http://localhost:3300/auth/kakao/callback`
-
-관리자로 지정할 소셜 계정 이메일은 `ADMIN_EMAILS=admin@example.com,other@example.com`처럼 설정합니다.
+관리자로 지정할 이메일은 `ADMIN_EMAILS=admin@example.com,other@example.com`처럼 설정합니다.
 
 ## 수집 규칙
 
@@ -71,7 +58,7 @@ KAKAO_CLIENT_SECRET=...
 
 ## 운영 배포
 
-1. `.env.production`을 만들고 `SECRET_KEY_BASE`, OAuth 키, 도메인, SES SMTP 자격 증명을 설정합니다.
+1. `.env.example`을 복사해 `.env`를 만들고 `SECRET_KEY_BASE`, 도메인, SES SMTP 자격 증명을 설정합니다.
 2. DNS에서 `APP_HOST`를 서버로 연결합니다.
 3. SES 서울 리전에서 발신 도메인을 인증하고 SPF·DKIM·DMARC 및 프로덕션 발송 승인을 완료합니다.
 4. 아래 명령으로 시작합니다.
@@ -79,6 +66,7 @@ KAKAO_CLIENT_SECRET=...
 ```bash
 docker compose -f compose.production.yaml up -d --build
 docker compose -f compose.production.yaml exec web bin/rails db:seed
+docker compose -f compose.production.yaml exec web bin/rails runner 'DiscoverCatalogsJob.perform_now'
 curl -f https://YOUR_DOMAIN/up
 ```
 
@@ -104,20 +92,20 @@ Rails 컨테이너 안에서 실행되는 Solid Queue recurring scheduler가 호
 호스트 cron에서 하루 한 번 실행합니다. 일간 7일, 일요일 사본은 주간 4주를 보관합니다.
 
 ```cron
-20 3 * * * cd /srv/ink-ventory && flock -n /tmp/ink-ventory-backup.lock sh -a -c '. ./.env.production; ./script/backup'
+20 3 * * * cd /srv/ink-ventory && flock -n /tmp/ink-ventory-backup.lock sh -a -c '. ./.env; ./script/backup'
 ```
 
 복원할 때는 잠시 서비스 사용을 중단한 뒤 실행합니다.
 
 ```bash
-set -a; . ./.env.production; set +a
+set -a; . ./.env; set +a
 ./script/restore backups/daily/ink-ventory-YYYYMMDD-HHMMSS.sqlite3
 ```
 
 ## 공개 전 확인
 
 - 개인정보 처리방침의 실제 운영자명·연락처·위탁 사업자 확정
-- Google/Kakao 운영 앱과 콜백 URL 등록
-- SES 테스트 발송, 수신 중지 링크, 일일 요약 확인
+- 이메일 인증번호 로그인과 재발급 제한 확인
+- SES 테스트 발송과 수신 중지 링크 확인
 - 네 판매처의 URL 등록·검색·상품 전체 재고 fixture를 실제 페이지로 재검증
-- Caddy HTTPS, `/up`, PostgreSQL 백업 복원 스모크 테스트
+- Caddy HTTPS, `/up`, SQLite 백업 복원 스모크 테스트

@@ -1,4 +1,5 @@
 require "test_helper"
+require "net/http"
 
 class HttpFetcherTest < ActiveSupport::TestCase
   test "decodes makeshop euc kr declared in html" do

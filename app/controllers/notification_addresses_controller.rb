@@ -23,9 +23,12 @@ class NotificationAddressesController < ApplicationController
 
   def verify
     address = NotificationAddress.find_by!(verification_token: params[:token])
-    address.verify!
+    address.transaction do
+      address.verify!
+      address.user.update!(email: address.email)
+    end
     redirect_to root_path, notice: "알림 이메일 인증이 완료되었습니다."
-  rescue ActiveRecord::RecordNotFound
+  rescue ActiveRecord::RecordNotFound, ActiveRecord::RecordInvalid
     redirect_to root_path, alert: "유효하지 않거나 이미 사용된 인증 링크입니다."
   end
 

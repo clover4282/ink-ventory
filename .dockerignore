@@ -1,9 +1,12 @@
 .git
 .github
 .serena
+.playwright-cli
+.DS_Store
 .env*
 config/master.key
 log/*
 tmp/*
+storage/*
 backups
 coverage

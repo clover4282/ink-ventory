@@ -3,13 +3,10 @@ services:
     build:
       context: .
     command: ./bin/rails server -b 0.0.0.0
+    env_file: .env
     environment:
       RAILS_ENV: development
       SOLID_QUEUE_IN_PUMA: "1"
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID:-}
-      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
       APP_HOST: ${APP_HOST:-localhost}
       APP_PORT: ${APP_PORT:-3300}
     ports:

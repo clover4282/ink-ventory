@@ -11,14 +11,24 @@ class User < ApplicationRecord
 
   validates :provider, :uid, presence: true
   validates :uid, uniqueness: { scope: :provider }
+  validates :email, uniqueness: { case_sensitive: false }, allow_blank: true
 
-  def self.from_omniauth(auth)
-    user = find_or_initialize_by(provider: auth.provider, uid: auth.uid)
-    user.name = auth.info.name.presence || auth.info.nickname.presence || "사용자"
-    user.email = auth.info.email.presence
-    user.admin = true if ENV.fetch("ADMIN_EMAILS", "").split(",").map(&:strip).include?(user.email)
-    user.save!
-    user.watch_groups.first_or_create!(name: "관심 상품")
+  def self.from_verified_email(email)
+    email = LoginChallenge.normalize_email(email)
+    user = NotificationAddress.find_by("LOWER(email) = ?", email)&.user || find_by("LOWER(email) = ?", email)
+    user ||= new(provider: "email", uid: SecureRandom.uuid)
+
+    transaction do
+      user.email = email
+      user.name = email.split("@").first if user.name.blank?
+      user.admin = true if ENV.fetch("ADMIN_EMAILS", "").split(",").map { |value| value.strip.downcase }.include?(email)
+      user.save!
+      user.watch_groups.first_or_create!(name: "관심 상품")
+      address = user.notification_address || user.build_notification_address
+      address.email = email
+      address.save!
+      address.verify!
+    end
     user
   end
 

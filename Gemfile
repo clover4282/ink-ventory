@@ -9,10 +9,6 @@ gem "sqlite3", ">= 2.1"
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
 gem "nokogiri", "~> 1.18"
-gem "omniauth-google-oauth2", "~> 1.2"
-gem "omniauth-kakao-oauth2", "~> 1.0"
-gem "omniauth-rails_csrf_protection", "~> 2.0"
-
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"
 

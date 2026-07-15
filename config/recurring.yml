@@ -11,9 +11,6 @@ default: &default
   discover_searches:
     class: DiscoverSearchesJob
     schedule: every day at 2am Asia/Seoul
-  build_daily_digests:
-    class: BuildDailyDigestsJob
-    schedule: every day at 8pm Asia/Seoul
   cleanup_delivery_logs:
     class: CleanupDeliveryLogsJob
     schedule: every day at 3am Asia/Seoul

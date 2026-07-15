@@ -1,0 +1,53 @@
+<% content_for :title, "관심 상품 관리 - Ink-ventory" %>
+<% status_labels = { "in_stock" => "재고 있음", "out_of_stock" => "품절", "removed" => "판매 종료" } %>
+
+<section class="welcome">
+  <div><p class="eyebrow">MY INTERESTS</p><h1>관심 상품 관리</h1></div>
+  <% if current_user.verified_for_notifications? %>
+    <span class="status good">● <%= current_user.notification_address.email %> 인증됨</span>
+  <% else %>
+    <%= link_to "알림 이메일 인증 필요", edit_notification_address_path, class: "status warning" %>
+  <% end %>
+</section>
+
+<section>
+  <div class="section-title">
+    <h2>관심 상품</h2>
+    <strong data-interest-count><%= @active_subscription_count %>/<%= Subscription::MAX_ACTIVE_PER_USER %></strong>
+  </div>
+  <p class="muted">알림 중인 관심 상품은 최대 10개까지 등록할 수 있습니다.</p>
+  <% if @subscriptions.empty? %>
+    <div class="empty">상품 목록에서 하트를 눌러 첫 관심 상품을 등록해 보세요.</div>
+  <% else %>
+    <div class="cards">
+      <% @subscriptions.each do |subscription| %>
+        <% listing = subscription.listing %>
+        <article class="product-card">
+          <% if listing.image_url.present? %>
+            <%= link_to listing_path(listing), class: "product-image-link" do %>
+              <%= image_tag listing.image_url, alt: listing.title, class: "product-image", loading: "lazy", referrerpolicy: "no-referrer" %>
+            <% end %>
+          <% else %>
+            <div class="product-image-link product-image-placeholder">이미지 수집 중</div>
+          <% end %>
+          <div class="card-top">
+            <span class="shop"><%= listing.site.name %></span>
+            <span class="status <%= listing.status == "in_stock" ? "good" : "warning" %>"><%= status_labels.fetch(listing.status, "확인 중") %></span>
+          </div>
+          <h3><%= link_to listing.title.presence || "상품 정보 확인 중", listing_path(listing) %></h3>
+          <p class="price"><%= listing.display_price ? "#{listing.display_price}원" : "가격 확인 중" %></p>
+          <p class="muted">마지막 정상 확인: <%= listing.last_success_at ? l(listing.last_success_at, format: :long) : "아직 없음" %></p>
+          <%= button_to "삭제", subscription_path(subscription), method: :delete, class: "button danger small" %>
+        </article>
+      <% end %>
+    </div>
+  <% end %>
+</section>
+
+<% if @recent_events.any? %>
+  <section class="panel history" data-recent-events><h2>최근 변경 이력</h2>
+    <table><thead><tr><th>시각</th><th>상품</th><th>판매처</th><th>변경</th></tr></thead><tbody>
+      <% @recent_events.each do |event| %><tr><td><%= l(event.occurred_at, format: :long) %></td><td><%= link_to event.listing.title, listing_path(event.listing) %></td><td><%= event.listing.site.name %></td><td><%= event.kind %></td></tr><% end %>
+    </tbody></table>
+  </section>
+<% end %>

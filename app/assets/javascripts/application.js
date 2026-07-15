@@ -214,9 +214,10 @@ const showCatalogNotice = (message) => {
 const toggleLike = (button) => {
   button.disabled = true
   fetch(button.dataset.likeUrl, { method: "POST", headers: requestHeaders() })
-    .then((response) => {
-      if (!response.ok) throw new Error("like failed")
-      return response.json()
+    .then(async (response) => {
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || "좋아요를 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.")
+      return data
     })
     .then(({ liked, count }) => {
       const card = button.closest("[data-catalog-card]")
@@ -229,7 +230,7 @@ const toggleLike = (button) => {
       const catalogForm = document.querySelector("form[data-auto-submit]")
       if (catalogForm) search(catalogForm)
     })
-    .catch(() => showCatalogNotice("좋아요를 처리하지 못했습니다. 잠시 후 다시 시도해 주세요."))
+    .catch((error) => showCatalogNotice(error.message))
     .finally(() => { button.disabled = false })
 }
 

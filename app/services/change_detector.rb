@@ -53,7 +53,6 @@ class ChangeDetector
       events = []
       events.concat(availability_events(previous, current))
       events << event!("PRICE_CHANGED", "", previous["base_price_cents"], current["base_price_cents"]) if changed_price?(previous["base_price_cents"], current["base_price_cents"])
-      evaluate_targets!(previous, current, events)
       events
     end
 
@@ -64,24 +63,6 @@ class ChangeDetector
       return [ event!("RESTOCKED", "", before, after) ] if before != "in_stock" && after == "in_stock"
       return [ event!("SOLD_OUT", "", before, after) ] if before == "in_stock" && after == "out_of_stock"
       []
-    end
-
-    def evaluate_targets!(previous, current, events)
-      @listing.subscriptions.where(active: true).where.not(target_price_cents: nil).find_each do |subscription|
-        before = previous["base_price_cents"]
-        after = current["base_price_cents"]
-        next unless after
-        if after > subscription.target_price_cents
-          subscription.update!(target_armed: true) unless subscription.target_armed?
-        elsif subscription.target_armed? && before && before > subscription.target_price_cents
-          target_event = event!(
-            "TARGET_REACHED", "", before, after,
-            "subscription_id" => subscription.id, "target_price_cents" => subscription.target_price_cents
-          )
-          subscription.update!(target_armed: false)
-          events << target_event
-        end
-      end
     end
 
     def changed_price?(before, after)

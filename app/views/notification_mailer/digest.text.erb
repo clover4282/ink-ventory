@@ -2,7 +2,8 @@ Ink-ventory 관심 상품 변경 요약
 
 <% @events.each do |event| %>
 <%= event_label(event.kind) %> · <%= event.listing.title %> / <%= event.listing.site.name %>
-<%= event.listing.canonical_url %>
+<% if (product_url = SiteRegistry.safe_external_url(event.listing.canonical_url)) %><%= product_url %>
+<% end %>
 
 <% end %>
 전체 알림 중지: <%= unsubscribe_notification_address_url(token: @address.unsubscribe_token) %>

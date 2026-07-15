@@ -9,6 +9,7 @@
 
 # Ignore all environment files.
 /.env*
+!/.env.example
 
 # Ignore all logfiles and tempfiles.
 /log/*
@@ -22,6 +23,8 @@
 !/tmp/pids/.keep
 
 /public/assets
+/.playwright-cli/
+/backups/
 
 # Ignore SQLite databases, but keep the directory.
 /storage/*

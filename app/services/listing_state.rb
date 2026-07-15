@@ -1,6 +1,7 @@
 ListingState = Data.define(:title, :currency, :base_price_cents, :availability, :variants, :image_url) do
   def as_json(*)
     {
+      "parser_version" => self.class::PARSER_VERSION,
       "title" => title.to_s,
       "currency" => currency.to_s,
       "base_price_cents" => base_price_cents,
@@ -20,3 +21,5 @@ ListingState = Data.define(:title, :currency, :base_price_cents, :availability, 
     )
   end
 end
+
+ListingState::PARSER_VERSION = 2 # Bump when price or availability classification changes.

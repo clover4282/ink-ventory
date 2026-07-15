@@ -17,7 +17,7 @@ class ChangeDetector
     events = []
     @listing.with_lock do
       @listing.observations.create!(state: @state_hash, observed_at: @at)
-      if @listing.current_state.blank?
+      if @listing.current_state.blank? || parser_version_changed?
         apply_state!
       elsif @listing.current_state == @state_hash
         @listing.update!(pending_state: nil, pending_seen_at: nil, next_check_at: @at + POLL_INTERVAL)
@@ -35,6 +35,10 @@ class ChangeDetector
   end
 
   private
+    def parser_version_changed?
+      @listing.current_state["parser_version"] != @state_hash["parser_version"]
+    end
+
     def apply_state!
       @listing.update!(
         title: @state.title, currency: @state.currency, base_price_cents: @state.base_price_cents,
@@ -87,7 +91,7 @@ class ChangeDetector
     def event!(kind, external_id, before, after, extra = {})
       @listing.change_events.create!(
         kind: kind, variant_external_id: external_id, previous_value: { "value" => before },
-        current_value: { "value" => after }.merge(extra), occurred_at: @at
+        current_value: { "value" => after, "parser_version" => @state_hash["parser_version"] }.merge(extra), occurred_at: @at
       )
     end
 end

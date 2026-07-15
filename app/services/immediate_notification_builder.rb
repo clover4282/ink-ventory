@@ -11,6 +11,8 @@ class ImmediateNotificationBuilder
     case @event.kind
     when "RESTOCKED"
       matching_subscriptions.where(notify_restock: true).find_each { |subscription| enqueue(subscription) }
+    when "PRICE_CHANGED"
+      matching_subscriptions.find_each { |subscription| enqueue(subscription) }
     when "TARGET_REACHED"
       subscription = Subscription.find_by(id: @event.current_value["subscription_id"])
       enqueue(subscription) if subscription&.active?

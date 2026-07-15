@@ -12,7 +12,7 @@ class HomeController < ApplicationController
     end
     listing_ids = @crawled_listings.map(&:id)
     @catalog_sites = @crawled_listings.map(&:site).uniq(&:id).sort_by(&:name)
-    @recent_restocked_at = ChangeEvent.where(listing_id: listing_ids, kind: "RESTOCKED", occurred_at: 10.days.ago..).group(:listing_id).maximum(:occurred_at)
+    @recent_restocked_at = ChangeEvent.versioned.where(listing_id: listing_ids, kind: "RESTOCKED", occurred_at: 10.days.ago..).group(:listing_id).maximum(:occurred_at)
     @liked_listing_ids = current_user ? ListingLike.where(user: current_user, listing_id: listing_ids).pluck(:listing_id).index_with(true) : {}
     return unless current_user
     @subscriptions = current_user.subscriptions.includes(listing: :site).order(created_at: :desc)

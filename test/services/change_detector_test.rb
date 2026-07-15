@@ -29,6 +29,33 @@ class ChangeDetectorTest < ActiveSupport::TestCase
     assert_equal 1, enqueued_jobs.count
   end
 
+  test "uses a new parser version as a baseline without creating false changes" do
+    old_state = state(price: 100_000, availability: "out_of_stock").as_json.merge("parser_version" => 1)
+    @listing.update!(current_state: old_state, status: "out_of_stock")
+
+    ChangeDetector.observe(@listing, state(price: 90_000, availability: "in_stock"), at: Time.zone.parse("2026-07-15 12:00"))
+
+    assert_empty ChangeEvent.all
+    assert_equal "in_stock", @listing.reload.status
+    assert_equal ListingState::PARSER_VERSION, @listing.current_state["parser_version"]
+    assert_equal ListingState::PARSER_VERSION, @listing.observations.last.state["parser_version"]
+  end
+
+  test "keeps confirmed price changes and notifies subscribers immediately" do
+    @group.subscriptions.create!(listing: @listing)
+    time = Time.zone.parse("2026-07-15 12:00")
+    ChangeDetector.observe(@listing, state(price: 100_000), at: time)
+
+    confirm(state(price: 90_000), time + 2.minutes)
+
+    event = ChangeEvent.find_by!(kind: "PRICE_CHANGED")
+    assert_equal({ "value" => 100_000 }, event.previous_value)
+    assert_equal({ "value" => 90_000, "parser_version" => ListingState::PARSER_VERSION }, event.current_value)
+    assert_equal 3, @listing.observations.count
+    assert_equal [ "event" ], MailDelivery.pluck(:kind)
+    assert_equal event.id, MailDelivery.first.metadata["event_id"]
+  end
+
   test "notifies each subscriber once while collecting a shared listing once" do
     @group.subscriptions.create!(listing: @listing)
     second = User.create!(provider: "kakao", uid: "user-2", name: "둘째")
@@ -61,13 +88,12 @@ class ChangeDetectorTest < ActiveSupport::TestCase
     assert_equal 2, ChangeEvent.where(kind: "TARGET_REACHED").count
   end
 
-  test "daily digest includes the subscribed product price change" do
+  test "daily digest excludes the subscribed product price change" do
     @group.subscriptions.create!(listing: @listing)
-    matching = @listing.change_events.create!(kind: "PRICE_CHANGED", occurred_at: Time.current)
+    @listing.change_events.create!(kind: "PRICE_CHANGED", occurred_at: Time.current)
 
-    delivery = DigestBuilder.call(@user)
-
-    assert_equal [ matching.id ], delivery.metadata["event_ids"]
+    assert_nil DigestBuilder.call(@user)
+    assert_empty MailDelivery.all
   end
 
   private

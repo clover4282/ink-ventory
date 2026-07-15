@@ -11,8 +11,7 @@ Rails.application.routes.draw do
   get "/notification-address/verify", to: "notification_addresses#verify", as: :verify_notification_address
   get "/notification-address/unsubscribe", to: "notification_addresses#unsubscribe", as: :unsubscribe_notification_address
 
-  resources :listings, only: :create do
-    post :click, on: :member
+  resources :listings, only: %i[show create] do
     post :like, on: :member
   end
   resources :searches, only: %i[create show]

@@ -177,9 +177,9 @@ document.addEventListener("click", (event) => {
     return
   }
 
-  const trackedLink = event.target.closest("[data-track-click]")
-  if (trackedLink) {
-    trackClick(trackedLink)
+  const detailCard = event.target.closest("[data-detail-url]")
+  if (detailCard && !event.target.closest("a, button, input, select, label")) {
+    window.location.assign(detailCard.dataset.detailUrl)
     return
   }
 
@@ -204,7 +204,8 @@ const requestHeaders = () => {
 }
 
 const showCatalogNotice = (message) => {
-  const notice = document.querySelector("[data-catalog-notice]")
+  const notice = document.querySelector("[data-like-notice], [data-catalog-notice]")
+  if (!notice) return
   notice.textContent = message
   notice.hidden = false
   notice.focus()
@@ -219,30 +220,31 @@ const toggleLike = (button) => {
     })
     .then(({ liked, count }) => {
       const card = button.closest("[data-catalog-card]")
-      card.dataset.likes = count
+      if (card) card.dataset.likes = count
       button.classList.toggle("liked", liked)
       button.setAttribute("aria-pressed", liked)
       button.querySelector("[data-like-icon]").textContent = liked ? "♥" : "♡"
       button.querySelector("[data-like-count]").textContent = count
-      showCatalogNotice(liked ? "관심 상품에 추가했습니다. 재입고와 가격 변동을 이메일로 알려드릴게요." : "관심 상품에서 제거했습니다.")
-      search(document.querySelector("form[data-auto-submit]"))
+      showCatalogNotice(liked ? "관심 상품에 추가했습니다. 재입고와 가격 변동을 모두 즉시 이메일로 알려드릴게요." : "관심 상품에서 제거했습니다.")
+      const catalogForm = document.querySelector("form[data-auto-submit]")
+      if (catalogForm) search(catalogForm)
     })
     .catch(() => showCatalogNotice("좋아요를 처리하지 못했습니다. 잠시 후 다시 시도해 주세요."))
     .finally(() => { button.disabled = false })
 }
 
-const trackClick = (link) => {
-  fetch(link.dataset.trackClick, { method: "POST", headers: requestHeaders(), keepalive: true })
-    .then((response) => response.ok ? response.json() : null)
-    .then((result) => {
-      if (!result) return
-      const card = link.closest("[data-catalog-card]")
-      card.dataset.clicks = result.count
-      card.querySelector("[data-click-count]").textContent = result.count
-    })
-    .catch(() => {})
-}
-
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("form[data-auto-submit]").forEach(search)
+})
+
+window.addEventListener("pageshow", () => {
+  const detailCount = document.querySelector("[data-detail-view-count]")
+  if (detailCount) sessionStorage.setItem(`listing-view-count:${detailCount.dataset.listingId}`, detailCount.dataset.viewCount)
+
+  document.querySelectorAll("[data-catalog-card]").forEach((card) => {
+    const storedCount = sessionStorage.getItem(`listing-view-count:${card.dataset.listingId}`)
+    if (storedCount === null || Number(storedCount) <= Number(card.dataset.clicks)) return
+    card.dataset.clicks = storedCount
+    card.querySelector("[data-click-count]").textContent = storedCount
+  })
 })

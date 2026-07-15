@@ -1,5 +1,5 @@
 class DigestBuilder
-  KINDS = %w[SOLD_OUT PRICE_CHANGED VISIBLE_QUANTITY_CHANGED NEW_SEARCH_RESULT REMOVED].freeze
+  KINDS = %w[SOLD_OUT VISIBLE_QUANTITY_CHANGED NEW_SEARCH_RESULT REMOVED].freeze
 
   def self.call(user, date: Time.zone.today)
     new(user, date: date).call

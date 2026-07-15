@@ -2,6 +2,13 @@ class ListingsController < ApplicationController
   before_action :require_authentication, only: %i[create like]
   before_action :require_verified_email, only: %i[create like]
 
+  def show
+    @listing = Listing.includes(:site).find(params[:id])
+    @listing.increment!(:clicks_count)
+    @liked = current_user ? @listing.listing_likes.exists?(user: current_user) : false
+    @change_events = @listing.change_events.versioned.where(kind: %w[RESTOCKED SOLD_OUT PRICE_CHANGED]).order(occurred_at: :desc)
+  end
+
   def create
     resolved = SiteRegistry.resolve(params.require(:url))
     SiteRegistry.ensure_sites!
@@ -17,12 +24,6 @@ class ListingsController < ApplicationController
     redirect_to root_path, notice: "관심 상품을 등록했습니다. 첫 확인 뒤 상태가 표시됩니다."
   rescue SiteRegistry::UnsupportedUrl => error
     redirect_to root_path, alert: error.message
-  end
-
-  def click
-    listing = Listing.find(params[:id])
-    Listing.increment_counter(:clicks_count, listing.id)
-    render json: { count: listing.reload.clicks_count }
   end
 
   def like

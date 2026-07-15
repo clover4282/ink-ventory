@@ -33,6 +33,7 @@
   <div class="empty" data-catalog-empty <%= "hidden" if @crawled_listing_count.positive? %>><%= @catalog_query.present? ? "검색 결과가 없습니다." : "아직 정상 수집된 상품이 없습니다." %></div>
   <div class="cards" data-catalog-cards <%= "hidden" if @crawled_listing_count.zero? %>>
       <% visible_count = 0 %>
+      <% new_since = 30.days.ago %>
       <% @crawled_listings.each do |listing| %>
         <% search_text = "#{listing.title} #{listing.site.name}".unicode_normalize(:nfc).downcase %>
         <% restocked_at = @recent_restocked_at[listing.id] %>
@@ -40,17 +41,20 @@
         <% matches = @catalog_query.blank? || CatalogSearch.match?(search_text, @catalog_query) %>
         <% visible = matches && visible_count < 50 %>
         <% visible_count += 1 if matches %>
-        <article class="product-card" data-catalog-card data-search-text="<%= search_text %>" data-listing-id="<%= listing.id %>" data-site-id="<%= listing.site_id %>" data-status="<%= listing.status %>" data-price="<%= listing.base_price_cents %>" data-created-at="<%= listing.created_at.to_i %>" data-restocked-at="<%= restocked_at&.to_i || 0 %>" data-clicks="<%= listing.clicks_count %>" data-likes="<%= listing.likes_count %>" <%= "hidden" unless visible %>>
+        <article class="product-card" data-catalog-card data-detail-url="<%= listing_path(listing) %>" data-search-text="<%= search_text %>" data-listing-id="<%= listing.id %>" data-site-id="<%= listing.site_id %>" data-status="<%= listing.status %>" data-price="<%= listing.base_price_cents %>" data-created-at="<%= listing.created_at.to_i %>" data-restocked-at="<%= restocked_at&.to_i || 0 %>" data-clicks="<%= listing.clicks_count %>" data-likes="<%= listing.likes_count %>" <%= "hidden" unless visible %>>
           <% if listing.image_url.present? %>
-            <%= link_to listing.canonical_url, target: "_blank", rel: "noopener", class: "product-image-link", data: { track_click: click_listing_path(listing) } do %>
+            <%= link_to listing_path(listing), class: "product-image-link" do %>
               <%= image_tag listing.image_url, alt: listing.title, class: "product-image", loading: "lazy", referrerpolicy: "no-referrer" %>
             <% end %>
           <% else %>
             <div class="product-image-link product-image-placeholder">이미지 수집 중</div>
           <% end %>
           <% logo_url = SiteRegistry.logo_url(listing.site.code) %>
-          <div class="card-top"><span class="shop"><%= image_tag logo_url, alt: "", class: "shop-logo", loading: "lazy", referrerpolicy: "no-referrer" if logo_url %><%= listing.site.name %></span><span class="status <%= listing.status == 'in_stock' ? 'good' : 'warning' %>"><%= {"in_stock" => "재고 있음", "out_of_stock" => "품절", "removed" => "판매 종료"}.fetch(listing.status, "확인 중") %></span></div>
-          <h3><%= link_to listing.title, listing.canonical_url, target: "_blank", rel: "noopener", data: { product_title: listing.title, track_click: click_listing_path(listing) } %></h3>
+          <div class="card-top">
+            <span class="shop"><%= image_tag logo_url, alt: "", class: "shop-logo", loading: "lazy", referrerpolicy: "no-referrer" if logo_url %><%= listing.site.name %></span>
+            <span class="card-badges"><% if listing.created_at >= new_since %><span class="status new-badge">NEW</span><% end %><span class="status <%= listing.status == 'in_stock' ? 'good' : 'warning' %>"><%= {"in_stock" => "재고 있음", "out_of_stock" => "품절", "removed" => "판매 종료"}.fetch(listing.status, "확인 중") %></span></span>
+          </div>
+          <h3><%= link_to listing.title, listing_path(listing), data: { product_title: listing.title } %></h3>
           <p class="price"><%= listing.display_price ? "#{listing.display_price}원" : "가격 확인 중" %></p>
           <p class="muted">마지막 정상 확인: <%= l(listing.last_success_at, format: :long) %></p>
           <div class="product-actions">
